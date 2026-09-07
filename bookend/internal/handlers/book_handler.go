@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"bookend/internal/middleware"
 	"bookend/internal/models"
 
 	"github.com/gin-gonic/gin"
@@ -26,6 +27,9 @@ func (h *BookHandler) GetMyBooks(c *gin.Context) {
 	var books []models.Book
 
 	query := h.db.Order("id desc")
+	if userID, ok := middleware.GetUserID(c); ok && userID != 0 {
+		query = query.Where("user_id = ?", userID)
+	}
 	if status := c.Query("status"); status != "" {
 		query = query.Where("status = ?", status)
 	}
@@ -73,7 +77,13 @@ func (h *BookHandler) CreateBook(c *gin.Context) {
 		return
 	}
 
+	var userID uint
+	if id, ok := middleware.GetUserID(c); ok {
+		userID = id
+	}
+
 	book := models.Book{
+		Isbn:          input.Isbn,
 		Title:         input.Title,
 		Author:        input.Author,
 		Description:   input.Description,
@@ -81,6 +91,7 @@ func (h *BookHandler) CreateBook(c *gin.Context) {
 		Pages:         input.Pages,
 		Owned:         false,
 		Read:          false,
+		UserId:        userID,
 	}
 
 	if err := h.db.Create(&book).Error; err != nil {

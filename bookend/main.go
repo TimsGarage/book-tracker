@@ -24,7 +24,7 @@ func main() {
 	}
 
 	// 4. Setup Gin router with handlers, templates, and static assets
-	router := routes.SetupRouter(db)
+	router := routes.SetupRouter(db, cfg)
 
 	// 5. Start HTTP server
 	log.Printf("Server starting on http://localhost:%s", cfg.Port)
