@@ -1,0 +1,19 @@
+# Binaries
+bookend
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# SQLite Database
+*.db
+*.db-journal
+
+# Environment files
+.env
+
+# IDEs
+.vscode/
+.idea/
+
