@@ -1,14 +1,12 @@
 import { redirect } from '@sveltejs/kit';
 import { authState } from '$lib/auth.svelte';
-import type { LayoutLoad } from './$types';
+import type { PageLoad } from './$types';
 
-export const load: LayoutLoad = async ({ fetch }) => {
+export const load: PageLoad = async ({ fetch }) => {
   const user = await authState.verifyToken(fetch);
   if (!user) {
     redirect(307, '/login');
   }
-
-  return {
-    user,
-  };
+  return { user };
 };
+

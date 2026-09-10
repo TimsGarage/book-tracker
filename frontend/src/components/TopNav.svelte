@@ -3,6 +3,7 @@
   import { getContext } from "svelte";
   import type { TopNavState } from "./types";
   import { handleBack } from "../utils/util";
+  import { authState } from "$lib/auth.svelte";
 
   let topNavState = getContext<TopNavState>("topNavState");
 </script>
@@ -24,7 +25,11 @@
       <span></span>
     {:else}
       <span class="decoration-1"></span>
-      <a href="/dev"
+      <a
+        href="/dev"
+        title={authState.user?.username
+          ? `Account: ${authState.user.username}`
+          : "Account"}
         ><CircleUserRound size="32" color="var(--main-background)" /></a
       >
     {/if}

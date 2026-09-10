@@ -8,17 +8,24 @@
 </script>
 
 <div class="book-preview">
-  {#if loading_cover}
+  {#if loading_cover && book.ThumbnailLink}
     <div class="thumbnail">
       <Loader size="32px" />
     </div>
   {/if}
-  <img
-    src={book.ThumbnailLink}
-    onload={() => (loading_cover = false)}
-    alt="cover"
-    class="thumbnail"
-  />
+  {#if book.ThumbnailLink}
+    <img
+      src={book.ThumbnailLink}
+      onload={() => (loading_cover = false)}
+      onerror={() => (loading_cover = false)}
+      alt={book.Title || "cover"}
+      class="thumbnail"
+    />
+  {:else}
+    <div class="thumbnail no-cover">
+      <span>No Cover</span>
+    </div>
+  {/if}
 
   <div class="publisher">
     <p>{book.Publisher}</p>

@@ -13,6 +13,12 @@ import (
 func SetupRouter(db *gorm.DB, cfg *config.Config) *gin.Engine {
 	r := gin.Default()
 
+	// CORS middleware
+	r.Use(middleware.CORSMiddleware())
+
+	// Body recovery middleware (recovers empty/stripped bodies from mobile WebViews)
+	r.Use(middleware.BodyRecoveryMiddleware())
+
 	// Instantiate handlers
 	healthHandler := handlers.NewHealthHandler()
 	bookHandler := handlers.NewBookHandler(db)

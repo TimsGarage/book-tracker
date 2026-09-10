@@ -24,7 +24,7 @@
       <ScanBarcode></ScanBarcode>
     </a>
     {@render navItem(BookSearch, "/")}
-    {@render navItem(Settings, "/login")}
+    {@render navItem(Settings, "/dev")}
   </div>
 </nav>
 

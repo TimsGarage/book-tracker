@@ -73,8 +73,20 @@ func (h *BookHandler) GetBook(c *gin.Context) {
 func (h *BookHandler) CreateBook(c *gin.Context) {
 	var input models.LookupBook
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+		if isbn, title := c.Query("isbn"), c.Query("title"); isbn != "" && title != "" {
+			pages, _ := strconv.Atoi(c.Query("pages"))
+			input = models.LookupBook{
+				Isbn:          isbn,
+				Title:         title,
+				Author:        c.Query("author"),
+				Description:   c.Query("description"),
+				ThumbnailLink: c.Query("thumbnail_link"),
+				Pages:         pages,
+			}
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 	}
 
 	var userID uint

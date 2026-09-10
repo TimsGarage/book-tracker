@@ -1,7 +1,9 @@
 import { defineConfig } from "vite";
 import { sveltekit } from "@sveltejs/kit/vite";
-import process from "node:process";
-const host = process.env.TAURI_DEV_HOST;
+const host =
+  typeof globalThis !== "undefined" && "process" in globalThis
+    ? /** @type {any} */ (globalThis).process.env?.TAURI_DEV_HOST
+    : undefined;
 
 // https://vite.dev/config/
 export default defineConfig(() => ({
@@ -16,6 +18,12 @@ export default defineConfig(() => ({
     port: 1420,
     strictPort: true,
     host: host || "127.0.0.1",
+    proxy: {
+      "/api": {
+        target: "http://127.0.0.1:8080",
+        changeOrigin: true,
+      },
+    },
     hmr: host
       ? {
           protocol: "ws",

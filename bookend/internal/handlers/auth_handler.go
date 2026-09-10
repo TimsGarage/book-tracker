@@ -84,8 +84,16 @@ func (h *AuthHandler) Register(c *gin.Context) {
 func (h *AuthHandler) Login(c *gin.Context) {
 	var input models.LoginInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+		if u, p := c.Query("username"), c.Query("password"); u != "" && p != "" {
+			input.Username = u
+			input.Password = p
+		} else if uForm, pForm := c.PostForm("username"), c.PostForm("password"); uForm != "" && pForm != "" {
+			input.Username = uForm
+			input.Password = pForm
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 	}
 
 	var user models.User

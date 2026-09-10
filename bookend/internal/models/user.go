@@ -16,8 +16,8 @@ type RegisterInput struct {
 
 // LoginInput defines the credentials required for authentication
 type LoginInput struct {
-	Username string `json:"username" binding:"required"`
-	Password string `json:"password" binding:"required"`
+	Username string `json:"username" form:"username" binding:"required"`
+	Password string `json:"password" form:"password" binding:"required"`
 }
 
 // UserResponse is the safe representation of a user without sensitive data

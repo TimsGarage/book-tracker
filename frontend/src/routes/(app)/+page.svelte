@@ -1,68 +1,134 @@
 <script lang="ts">
-  import { getContext } from "svelte";
+  import { getContext, onMount } from "svelte";
   import BookCard from "../../components/BookCard.svelte";
   import type { TopNavState } from "../../components/types";
   import Input from "../../components/Input.svelte";
-  import { Search } from "lucide-svelte";
+  import Loader from "../../components/Loader.svelte";
+  import { Search, PlusCircle, BookOpen } from "lucide-svelte";
   import Chip from "../../components/Chip.svelte";
+  import { fetchBooks } from "$lib/api";
+  import type { Book } from "$lib/types";
 
   let topNavState = getContext<TopNavState>("topNavState");
-  topNavState.heading = "Home";
-  topNavState.showBackButton = false;
+  if (topNavState) {
+    topNavState.heading = "Home";
+    topNavState.showBackButton = false;
+  }
 
-  const test_data = [
-    {
-      Isbn: "9783792000274",
-      Title: "Der Kleine Prinz",
-      Author: "Antoine de Saint-Exupéry",
-      Publisher: "Verlag",
-      Release: 1979,
-      Description: "",
-      ThumbnailLink: "https://covers.openlibrary.org/b/id/1027413-L.jpg",
-      Pages: 94,
-    },
-    {
-      Isbn: "9781546154419",
-      Title: "Harry Potter and the Goblet of Fire",
-      Author: "J. K. Rowling",
-      Publisher: "Verlag",
-      Release: 1979,
-      Description: "",
-      ThumbnailLink: "https://covers.openlibrary.org/b/id/15227222-L.jpg",
-      Pages: 608,
-    },
-    {
-      Isbn: "9783743200111",
-      Title: "Elanus",
-      Author: "Ursula Poznanski",
-      Publisher: "Verlag",
-      Release: 1979,
-      Description: "",
-      ThumbnailLink: "https://covers.openlibrary.org/b/id/14570203-L.jpg",
-      Pages: 412,
-    },
-  ];
+  let books = $state<Book[]>([]);
+  let isLoading = $state(true);
+  let errorMessage = $state("");
+  let searchQuery = $state("");
+  let activeFilter = $state<"all" | "unread" | "read" | "reading">("all");
+
+  async function loadBooks() {
+    isLoading = true;
+    errorMessage = "";
+    try {
+      books = await fetchBooks();
+    } catch (err: any) {
+      console.error("Failed to load books:", err);
+      errorMessage = err.message || "Failed to load library";
+    } finally {
+      isLoading = false;
+    }
+  }
+
+  onMount(() => {
+    loadBooks();
+  });
+
+  const filteredBooks = $derived(
+    books.filter((b) => {
+      const q = searchQuery.toLowerCase().trim();
+      const matchesSearch =
+        !q ||
+        (b.Title || "").toLowerCase().includes(q) ||
+        (b.Author || "").toLowerCase().includes(q) ||
+        (b.Isbn || "").toLowerCase().includes(q);
+
+      if (!matchesSearch) return false;
+
+      if (activeFilter === "unread") return !b.read;
+      if (activeFilter === "read") return !!b.read;
+      return true;
+    }),
+  );
+
+  const unreadCount = $derived(books.filter((b) => !b.read).length);
+  const readCount = $derived(books.filter((b) => !!b.read).length);
 </script>
 
 <div class="page">
   <div class="header">
-    <Input placeholder="Search for a Book">
+    <Input placeholder="Search for a Book" bind:value={searchQuery}>
       {#snippet icon()}
         <Search size="24" color="var(--text)" />
       {/snippet}
     </Input>
 
     <div class="tags">
-      <Chip text="All Books (25)" selected />
-      <Chip text="Ungelesen (12)" />
-      <Chip text="Gelesen (6)" />
-      <Chip text="Am Lesen (11)" />
+      <button
+        type="button"
+        class="tag-btn"
+        onclick={() => (activeFilter = "all")}
+      >
+        <Chip
+          text="All Books ({books.length})"
+          selected={activeFilter === "all"}
+        />
+      </button>
+      <button
+        type="button"
+        class="tag-btn"
+        onclick={() => (activeFilter = "unread")}
+      >
+        <Chip
+          text="Ungelesen ({unreadCount})"
+          selected={activeFilter === "unread"}
+        />
+      </button>
+      <button
+        type="button"
+        class="tag-btn"
+        onclick={() => (activeFilter = "read")}
+      >
+        <Chip text="Gelesen ({readCount})" selected={activeFilter === "read"} />
+      </button>
     </div>
   </div>
 
-  {#each test_data as book}
-    <BookCard {book} />
-  {/each}
+  <div class="books-container">
+    {#if isLoading}
+      <div class="status-view">
+        <Loader size="48px" />
+        <p>Loading your library...</p>
+      </div>
+    {:else if errorMessage}
+      <div class="status-view error">
+        <p>{errorMessage}</p>
+        <button onclick={loadBooks}>Retry</button>
+      </div>
+    {:else if filteredBooks.length === 0}
+      <div class="status-view empty">
+        <BookOpen size="48" color="var(--accent-color)" />
+        {#if searchQuery}
+          <p>No books found matching "{searchQuery}"</p>
+        {:else}
+          <h3>Your library is empty</h3>
+          <p>Scan your first book to begin curating your shelves</p>
+          <a href="/scanner" class="btn-primary">
+            <PlusCircle size="18" />
+            <span>Scan a Book</span>
+          </a>
+        {/if}
+      </div>
+    {:else}
+      {#each filteredBooks as book (book.id || book.Isbn || book.Title)}
+        <BookCard {book} />
+      {/each}
+    {/if}
+  </div>
 </div>
 
 <style>
@@ -73,6 +139,7 @@
     display: flex;
     flex-direction: column;
     background-color: var(--main-background);
+    overflow-y: auto;
   }
 
   .header {
@@ -82,11 +149,58 @@
     padding: 2rem 1rem;
     padding-bottom: 1rem;
     border-bottom: 1px solid var(--outline);
+    background-color: var(--main-background);
+    position: sticky;
+    top: 0;
+    z-index: 2;
   }
 
   .tags {
     display: flex;
     overflow-x: auto;
     gap: 0.5rem;
+    cursor: pointer;
+  }
+
+  .tag-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    display: inline-flex;
+  }
+
+  .books-container {
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  .status-view {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    gap: 1rem;
+    text-align: center;
+    color: var(--text-muted);
+  }
+
+  .status-view.empty h3 {
+    color: var(--text);
+    margin: 0;
+  }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: var(--accent-color);
+    color: var(--text-reversed);
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    text-decoration: none;
+    font-weight: 600;
+    margin-top: 0.5rem;
   }
 </style>
