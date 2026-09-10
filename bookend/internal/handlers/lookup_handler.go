@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -21,26 +20,23 @@ func NewLookupHandler(db *gorm.DB) *LookupHandler {
 	return &LookupHandler{db: db}
 }
 
-// Intermediate structs to decode the Google Books JSON
-type GoogleBooksResponse struct {
-	Items []struct {
-		VolumeInfo struct {
-			Title       string   `json:"title"`
-			Authors     []string `json:"authors"`
-			Description string   `json:"description"`
-			PageCount   int      `json:"pageCount"`
-			ImageLinks  struct {
-				Thumbnail string `json:"thumbnail"`
-			} `json:"imageLinks"`
-			IndustryIdentifiers []struct {
-				Type       string `json:"type"`
-				Identifier string `json:"identifier"`
-			} `json:"industryIdentifiers"`
-		} `json:"volumeInfo"`
-	} `json:"items"`
+// Intermediate struct to decode the Open Library Books API JSON
+type OpenLibraryBook struct {
+	Title         string `json:"title"`
+	NumberOfPages int    `json:"number_of_pages"`
+	Authors       []struct {
+		Name string `json:"name"`
+	} `json:"authors"`
+	Cover struct {
+		Large string `json:"large"`
+	} `json:"cover"`
+	Identifiers struct {
+		Isbn13 []string `json:"isbn_13"`
+		Isbn10 []string `json:"isbn_10"`
+	} `json:"identifiers"`
 }
 
-// Example isbn: 379200027X
+// Example isbn: 9780140328721
 func (h *LookupHandler) IsbnLookup(c *gin.Context) {
 	isbn := c.Query("isbn")
 	if isbn == "" {
@@ -49,17 +45,12 @@ func (h *LookupHandler) IsbnLookup(c *gin.Context) {
 		return
 	}
 
-	apiKey := os.Getenv("GOOGLE_BOOKS_KEY")
-	if apiKey == "" {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to query google books"})
-		log.Printf("GOOGLE_BOOKS_KEY not set")
-		return
-	}
-
-	url := "https://www.googleapis.com/books/v1/volumes?q=isbn:" + isbn + "&key=" + apiKey
+	// Use the Books API endpoint with the data format
+	bibKey := "ISBN:" + isbn
+	url := "https://openlibrary.org/api/books?bibkeys=" + bibKey + "&format=json&jscmd=data"
 
 	reqClient := http.Client{
-		Timeout: time.Second * 5,
+		Timeout: time.Second * 15,
 	}
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)
@@ -71,41 +62,48 @@ func (h *LookupHandler) IsbnLookup(c *gin.Context) {
 
 	res, getErr := reqClient.Do(req)
 	if getErr != nil {
-		log.Printf("Error requesting Google Books API: %v", getErr)
-		c.JSON(http.StatusBadGateway, gin.H{"error": "Failed to contact Google Books API"})
+		log.Printf("Error requesting Open Library API: %v", getErr)
+		c.JSON(http.StatusBadGateway, gin.H{"error": "Failed to contact Open Library API"})
 		return
 	}
 	defer res.Body.Close()
-	var apiRes GoogleBooksResponse
+
+	// The API returns a map with the bibKey as the root property
+	var apiRes map[string]OpenLibraryBook
 	if err := json.NewDecoder(res.Body).Decode(&apiRes); err != nil {
 		log.Printf("Error decoding JSON: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse API response"})
 		return
 	}
 
-	if len(apiRes.Items) == 0 {
+	// Extract the book object using the dynamic key
+	volume, exists := apiRes[bibKey]
+	if !exists {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Book not found"})
 		return
 	}
 
-	volume := apiRes.Items[0].VolumeInfo
+	// Map author names
+	var authorNames []string
+	for _, author := range volume.Authors {
+		authorNames = append(authorNames, author.Name)
+	}
 
+	// Map to your target struct
 	book := models.LookupBook{
 		Title:         volume.Title,
-		Author:        strings.Join(volume.Authors, ", "),
-		Description:   volume.Description,
-		ThumbnailLink: volume.ImageLinks.Thumbnail,
-		Pages:         volume.PageCount,
+		Author:        strings.Join(authorNames, ", "),
+		ThumbnailLink: volume.Cover.Large,
+		Pages:         volume.NumberOfPages,
 	}
 
 	// Extract the ISBN (Prefer ISBN_13)
-	for _, ident := range volume.IndustryIdentifiers {
-		if ident.Type == "ISBN_13" {
-			book.Isbn = ident.Identifier
-			break
-		} else if ident.Type == "ISBN_10" && book.Isbn == "" {
-			book.Isbn = ident.Identifier
-		}
+	if len(volume.Identifiers.Isbn13) > 0 {
+		book.Isbn = volume.Identifiers.Isbn13[0]
+	} else if len(volume.Identifiers.Isbn10) > 0 {
+		book.Isbn = volume.Identifiers.Isbn10[0]
+	} else {
+		book.Isbn = isbn
 	}
 
 	c.JSON(http.StatusOK, book)
