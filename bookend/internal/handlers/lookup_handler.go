@@ -34,6 +34,10 @@ type OpenLibraryBook struct {
 		Isbn13 []string `json:"isbn_13"`
 		Isbn10 []string `json:"isbn_10"`
 	} `json:"identifiers"`
+	Publishers []struct {
+		Name string `json:"name"`
+	} `json:"publishers"`
+	ReleaseDate string `json:"publish_date"`
 }
 
 // Example isbn: 9780140328721
@@ -89,10 +93,18 @@ func (h *LookupHandler) IsbnLookup(c *gin.Context) {
 		authorNames = append(authorNames, author.Name)
 	}
 
+	// Map publisher names
+	var publisherNames []string
+	for _, publisher := range volume.Publishers {
+		publisherNames = append(publisherNames, publisher.Name)
+	}
+
 	// Map to your target struct
 	book := models.LookupBook{
 		Title:         volume.Title,
 		Author:        strings.Join(authorNames, ", "),
+		Release:       volume.ReleaseDate,
+		Publisher:     strings.Join(publisherNames, ", "),
 		ThumbnailLink: volume.Cover.Large,
 		Pages:         volume.NumberOfPages,
 	}

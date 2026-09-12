@@ -6,6 +6,8 @@
     defaultValue?: string; // Fallback default if value isn't provided
     label?: string; // The floating label text
     placeholder?: string;
+    fill?: boolean;
+    disabled?: boolean;
     min?: string;
     max?: string;
   }
@@ -15,8 +17,10 @@
     defaultValue = "",
     label = "Date",
     placeholder = "Select date",
+    fill = false,
+    disabled = false,
     min = undefined,
-    max = undefined
+    max = undefined,
   }: Props = $props();
 
   const id = $props.id();
@@ -36,25 +40,19 @@
     return date.toLocaleDateString(undefined, {
       month: "short",
       day: "numeric",
-      year: "numeric"
+      year: "numeric",
     });
   });
 </script>
 
-<div class="datepicker">
+<div class="datepicker" class:fill class:disabled>
   <!-- Floating label resting on the top border -->
   {#if label}
     <span class="floating-label">{label}</span>
   {/if}
 
   <!-- Invisible native input spanning the box -->
-  <input
-    {id}
-    type="date"
-    bind:value={value}
-    {min}
-    {max}
-  />
+  <input {id} type="date" bind:value {min} {max} {disabled} />
 
   <Calendar size="22" strokeWidth="1.5" />
 
@@ -79,6 +77,20 @@
     gap: 0.75rem;
     box-sizing: border-box;
     background-color: var(--main-background, transparent);
+  }
+
+  .datepicker.fill {
+    width: 100%;
+  }
+
+  .datepicker.disabled {
+    color: var(--text-muted);
+    background-color: var(--secondary-background);
+    cursor: not-allowed;
+  }
+
+  .datepicker.disabled .floating-label {
+    visibility: hidden;
   }
 
   /* Floating label overlapping top border */

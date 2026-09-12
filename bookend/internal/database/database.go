@@ -2,6 +2,7 @@ package database
 
 import (
 	"log"
+	"os"
 
 	"bookend/internal/auth"
 	"bookend/internal/config"
@@ -50,11 +51,13 @@ func SeedAdminUser(db *gorm.DB, cfg *config.Config) error {
 	if count == 0 {
 		username := cfg.AdminUsername
 		if username == "" {
-			username = "admin"
+			log.Fatal("No admin username set")
+			os.Exit(1)
 		}
 		password := cfg.AdminPassword
 		if password == "" {
-			password = "admin123"
+			log.Fatal("No admin password set")
+			os.Exit(1)
 		}
 
 		hashedPassword, err := auth.HashPassword(password)
@@ -65,6 +68,7 @@ func SeedAdminUser(db *gorm.DB, cfg *config.Config) error {
 		admin := models.User{
 			Username: username,
 			Password: hashedPassword,
+			Admin:    true,
 		}
 
 		if err := db.Create(&admin).Error; err != nil {

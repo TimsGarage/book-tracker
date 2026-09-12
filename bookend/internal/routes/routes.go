@@ -39,8 +39,8 @@ func SetupRouter(db *gorm.DB, cfg *config.Config) *gin.Engine {
 		// Authentication routes
 		auth := v1.Group("/auth")
 		{
-			auth.POST("/register", authHandler.Register)
 			auth.POST("/login", authHandler.Login)
+			auth.POST("/register", authMiddleware, authHandler.Register)
 			auth.GET("/me", authMiddleware, authHandler.Me)
 			auth.POST("/change-password", authMiddleware, authHandler.ChangePassword)
 			auth.PUT("/password", authMiddleware, authHandler.ChangePassword)
@@ -50,18 +50,13 @@ func SetupRouter(db *gorm.DB, cfg *config.Config) *gin.Engine {
 		books := v1.Group("/books")
 		books.Use(authMiddleware)
 		{
-			books.GET("", bookHandler.GetMyBooks)
+			books.GET("/", bookHandler.GetMyBooks)
+			books.GET("/owned", bookHandler.GetOwnedBooks)
+			books.GET("/read", bookHandler.GetReadBooks)
+			books.GET("/wishlist", bookHandler.GetWishlistBooks)
 			books.GET("/:id", bookHandler.GetBook)
 			books.POST("", bookHandler.CreateBook)
-		}
-
-		// Also support singular /book with the same auth protection
-		book := v1.Group("/book")
-		book.Use(authMiddleware)
-		{
-			book.GET("", bookHandler.GetMyBooks)
-			book.GET("/:id", bookHandler.GetBook)
-			book.POST("", bookHandler.CreateBook)
+			books.DELETE("/:id", bookHandler.DeleteBook)
 		}
 
 		lookup := v1.Group("/lookup")

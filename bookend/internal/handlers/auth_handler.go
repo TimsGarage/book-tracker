@@ -36,6 +36,23 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
+	// Check that user that is requesting the register is an admin
+	var requestingUser models.User
+	if userID, ok := middleware.GetUserID(c); ok && userID != 0 {
+		if err := h.db.Where("id = ?", userID).First(&requestingUser).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid username or password"})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error checking user"})
+			return
+		}
+	}
+	if !requestingUser.Admin {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Only admins can create new accounts"})
+		return
+	}
+
 	// Check if username is already taken
 	var existingUser models.User
 	if err := h.db.Where("username = ?", input.Username).First(&existingUser).Error; err == nil {
@@ -56,6 +73,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	user := models.User{
 		Username: input.Username,
 		Password: hashedPassword,
+		Admin:    false,
 	}
 
 	if err := h.db.Create(&user).Error; err != nil {
@@ -122,6 +140,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		User: models.UserResponse{
 			ID:       user.ID,
 			Username: user.Username,
+			Admin:    user.Admin,
 		},
 	})
 }
@@ -148,6 +167,7 @@ func (h *AuthHandler) Me(c *gin.Context) {
 	c.JSON(http.StatusOK, models.UserResponse{
 		ID:       user.ID,
 		Username: user.Username,
+		Admin:    user.Admin,
 	})
 }
 

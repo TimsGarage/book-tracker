@@ -4,34 +4,34 @@
     BookSearch,
     ChevronLeft,
     CircleUserRound,
+    Code,
     Library,
     Scan,
     ScanBarcode,
     Settings,
   } from "lucide-svelte";
+  import BottomNavItem from "./BottomNavItem.svelte";
 </script>
 
 <nav class="bottomnav">
-  {#snippet navItem(Icon: ConstructorOfATypedSvelteComponent, link: string)}
-    <a class="navItem" href={link}>
-      <Icon></Icon>
-    </a>
-  {/snippet}
   <div class="content">
-    {@render navItem(Library, "/")}
-    {@render navItem(Bookmark, "/")}
+    <BottomNavItem Icon={Library} link="/"></BottomNavItem>
+    <BottomNavItem Icon={Bookmark} link="/wishlist"></BottomNavItem>
     <a class="scanner" href="/scanner">
       <ScanBarcode></ScanBarcode>
     </a>
-    {@render navItem(BookSearch, "/")}
-    {@render navItem(Settings, "/dev")}
+    <BottomNavItem Icon={BookSearch} link="/read"></BottomNavItem>
+    <BottomNavItem Icon={CircleUserRound} link="/profile"></BottomNavItem>
   </div>
 </nav>
 
 <style>
   .bottomnav {
+    z-index: 10;
     position: sticky;
+    top: 100%;
     bottom: 0;
+    left: 0;
     width: 100%;
     background-color: var(--main-background);
   }
@@ -56,6 +56,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+
+  .navItem.active {
+    background-color: red;
   }
 
   .scanner {

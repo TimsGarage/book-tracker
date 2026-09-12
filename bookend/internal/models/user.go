@@ -4,6 +4,7 @@ type User struct {
 	Model
 	Username string `gorm:"not null,unique" json:"username"`
 	Password string `gorm:"not null" json:"-"`
+	Admin    bool   `json:"admin"`
 
 	Books []Book `gorm:"foreignKey:UserId" json:"books"`
 }
@@ -24,6 +25,7 @@ type LoginInput struct {
 type UserResponse struct {
 	ID       uint   `json:"id"`
 	Username string `json:"username"`
+	Admin    bool   `json:"admin"`
 }
 
 // AuthResponse returns the generated token and safe user profile

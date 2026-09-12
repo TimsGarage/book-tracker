@@ -219,6 +219,40 @@ func TestBookRoutesProtectedByMiddleware(t *testing.T) {
 	if listResp.Data[0].UserId != authResp.User.ID {
 		t.Errorf("expected book user_id %d, got %d", authResp.User.ID, listResp.Data[0].UserId)
 	}
+
+	// 6. Duplicate ISBN for the same user should return 409 Conflict
+	reqDup, _ := http.NewRequest(http.MethodPost, "/api/v1/books", bytes.NewBuffer(createBody))
+	reqDup.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+	reqDup.Header.Set("Content-Type", "application/json")
+	wDup := httptest.NewRecorder()
+	router.ServeHTTP(wDup, reqDup)
+
+	if wDup.Code != http.StatusConflict {
+		t.Errorf("expected status 409 Conflict for duplicate ISBN, got %d. Body: %s", wDup.Code, wDup.Body.String())
+	}
+
+	// 7. Another user adding the same ISBN should succeed
+	regBody2, _ := json.Marshal(models.RegisterInput{
+		Username: "author2",
+		Password: "password123",
+	})
+	reqReg2, _ := http.NewRequest(http.MethodPost, "/api/v1/auth/register", bytes.NewBuffer(regBody2))
+	reqReg2.Header.Set("Content-Type", "application/json")
+	wReg2 := httptest.NewRecorder()
+	router.ServeHTTP(wReg2, reqReg2)
+
+	var authResp2 models.AuthResponse
+	_ = json.Unmarshal(wReg2.Body.Bytes(), &authResp2)
+
+	reqCreateUser2, _ := http.NewRequest(http.MethodPost, "/api/v1/books", bytes.NewBuffer(createBody))
+	reqCreateUser2.Header.Set("Authorization", fmt.Sprintf("Bearer %s", authResp2.Token))
+	reqCreateUser2.Header.Set("Content-Type", "application/json")
+	wCreateUser2 := httptest.NewRecorder()
+	router.ServeHTTP(wCreateUser2, reqCreateUser2)
+
+	if wCreateUser2.Code != http.StatusCreated {
+		t.Errorf("expected status 201 Created for different user with same ISBN, got %d", wCreateUser2.Code)
+	}
 }
 
 func TestAdminBootupSeeding(t *testing.T) {

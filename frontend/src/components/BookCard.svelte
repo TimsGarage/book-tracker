@@ -1,24 +1,25 @@
 <script lang="ts">
-  import { Star } from "lucide-svelte";
-  import Chip from "./Chip.svelte";
   import Loader from "./Loader.svelte";
-  let { book } = $props();
+  import type { Book } from "$lib/types";
+  let { book, onclick }: { book: Book; onclick: any } = $props();
 
   let loading_cover = $state(true);
 </script>
 
-<div class="book-preview">
-  {#if loading_cover && book.ThumbnailLink}
+<!-- svelte-ignore a11y_click_events_have_key_events -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div class="book-preview" {onclick}>
+  {#if loading_cover && book.thumbnail_link}
     <div class="thumbnail">
       <Loader size="32px" />
     </div>
   {/if}
-  {#if book.ThumbnailLink}
+  {#if book.thumbnail_link}
     <img
-      src={book.ThumbnailLink}
+      src={book.thumbnail_link}
       onload={() => (loading_cover = false)}
       onerror={() => (loading_cover = false)}
-      alt={book.Title || "cover"}
+      alt={book.title || "cover"}
       class="thumbnail"
     />
   {:else}
@@ -28,19 +29,19 @@
   {/if}
 
   <div class="publisher">
-    <p>{book.Publisher}</p>
-    <p>Unread</p>
+    <p>{book.publisher}</p>
+    <p>{book.ownership_status}</p>
   </div>
 
   <div class="main-info">
-    <h2>{book.Title}</h2>
-    <h6>{book.Author}</h6>
+    <h2>{book.title}</h2>
+    <h6>{book.author}</h6>
   </div>
 
   <div class="additional-info">
     <p>
-      Pages: {book.Pages} - {book.Release} -
-      <span>3/5<Star size="16" color="var(--accent-color)" /></span>
+      Pages: {book.pages} - {book.release} - {book.reading_status}
+      <!-- <span>3/5<Star size="16" color="var(--accent-color)" /></span> -->
     </p>
   </div>
 </div>

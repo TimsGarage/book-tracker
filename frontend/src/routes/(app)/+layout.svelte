@@ -3,12 +3,14 @@
   import { setContext } from "svelte";
   import type { TopNavState } from "../../components/types";
   import BottomNav from "../../components/BottomNav.svelte";
+  import { handleBack } from "$lib/util";
 
   let { children } = $props();
 
   const topNavState: TopNavState = $state({
     heading: "My Library",
     showBackButton: false,
+    onBack: () => handleBack,
   });
 
   setContext("topNavState", topNavState);

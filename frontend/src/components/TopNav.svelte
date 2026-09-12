@@ -2,8 +2,7 @@
   import { ChevronLeft, CircleUserRound, Library } from "lucide-svelte";
   import { getContext } from "svelte";
   import type { TopNavState } from "./types";
-  import { handleBack } from "../utils/util";
-  import { authState } from "$lib/auth.svelte";
+  import { handleBack } from "../lib/util";
 
   let topNavState = getContext<TopNavState>("topNavState");
 </script>
@@ -13,26 +12,14 @@
     {#if topNavState.showBackButton}
       <!-- svelte-ignore a11y_click_events_have_key_events -->
       <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <span on:click={handleBack} style="height: 32px"
-        ><ChevronLeft size="32" /></span
+      <span
+        onclick={topNavState.onBack ? topNavState.onBack() : handleBack()}
+        style="height: 32px"><ChevronLeft size="32" /></span
       >
     {:else}
-      <a href="/"><Library size="32" /></a>
+      <a href="/" style="height:32px"><Library size="32" /></a>
     {/if}
     <h3>{topNavState.heading}</h3>
-
-    {#if topNavState.showBackButton}
-      <span></span>
-    {:else}
-      <span class="decoration-1"></span>
-      <a
-        href="/dev"
-        title={authState.user?.username
-          ? `Account: ${authState.user.username}`
-          : "Account"}
-        ><CircleUserRound size="32" color="var(--main-background)" /></a
-      >
-    {/if}
   </div>
 </nav>
 
@@ -63,19 +50,5 @@
 
   .content * {
     z-index: 5;
-  }
-
-  .decoration-1 {
-    z-index: 0;
-    position: absolute;
-    width: 300px;
-    height: 300px;
-    background-color: var(--accent-color);
-    rotate: 130deg;
-  }
-
-  .decoration-1 {
-    right: -190px;
-    top: 30px;
   }
 </style>

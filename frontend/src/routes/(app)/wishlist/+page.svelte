@@ -1,20 +1,18 @@
 <script lang="ts">
   import { getContext, onMount } from "svelte";
-  import BookCard from "../../components/BookCard.svelte";
-  import type { TopNavState } from "../../components/types";
-  import Input from "../../components/Input.svelte";
-  import Loader from "../../components/Loader.svelte";
-  import { Search, BookOpen, CirclePlus } from "lucide-svelte";
-  import Chip from "../../components/Chip.svelte";
-  import { fetchOwnedBooks } from "$lib/api";
+  import { Search, BookOpen, CirclePlus, Loader } from "lucide-svelte";
+  import { fetchWishlistBooks } from "$lib/api";
   import type { Book, BookReadingStatus } from "$lib/types";
-  import BookPage from "../../components/BookPage.svelte";
   import { handleBack } from "$lib/util";
+  import type { TopNavState } from "../../../components/types";
+  import BookPage from "../../../components/BookPage.svelte";
+  import Input from "../../../components/Input.svelte";
+  import BookCard from "../../../components/BookCard.svelte";
 
   let selectedBook: Book | null = $state(null);
 
   function resetNav() {
-    topNavState.heading = "Library";
+    topNavState.heading = "Wishlist";
     topNavState.showBackButton = false;
     topNavState.onBack = handleBack;
     selectedBook = null;
@@ -29,16 +27,15 @@
   let isLoading = $state(true);
   let errorMessage = $state("");
   let searchQuery = $state("");
-  let activeFilter = $state<"all" | BookReadingStatus>("all");
 
   async function loadBooks() {
     isLoading = true;
     errorMessage = "";
     try {
-      books = await fetchOwnedBooks();
+      books = await fetchWishlistBooks();
     } catch (err: any) {
       console.error("Failed to load books:", err);
-      errorMessage = err.message || "Failed to load library";
+      errorMessage = err.message || "Failed to load wishlist";
     } finally {
       isLoading = false;
     }
@@ -49,7 +46,7 @@
   });
 
   // 1. Filter books ONLY by search query
-  const searchMatchedBooks = $derived(
+  const filteredBooks = $derived(
     books.filter((b: Book) => {
       const q = searchQuery.toLowerCase().trim();
       if (!q) return true;
@@ -58,27 +55,6 @@
         (b.author || "").toLowerCase().includes(q) ||
         (b.isbn || "").toLowerCase().includes(q)
       );
-    }),
-  );
-
-  // 2. Derive counts directly from searchMatchedBooks
-  const unreadCount = $derived(
-    searchMatchedBooks.filter((b) => b.reading_status === "unread").length,
-  );
-  const readCount = $derived(
-    searchMatchedBooks.filter((b) => b.reading_status === "read").length,
-  );
-  const readingCount = $derived(
-    searchMatchedBooks.filter((b) => b.reading_status === "reading").length,
-  );
-
-  // 3. Derive final list by applying the active status tab filter
-  const filteredBooks = $derived(
-    searchMatchedBooks.filter((b) => {
-      if (activeFilter === "unread") return b.reading_status === "unread";
-      if (activeFilter === "read") return b.reading_status === "read";
-      if (activeFilter === "reading") return b.reading_status === "reading";
-      return true;
     }),
   );
 
@@ -123,36 +99,13 @@
         <Search size="24" color="var(--text)" />
       {/snippet}
     </Input>
-
-    <div class="tags">
-      <Chip
-        onclick={() => (activeFilter = "all")}
-        text="All Books ({filteredBooks.length})"
-        selected={activeFilter === "all"}
-      />
-      <Chip
-        onclick={() => (activeFilter = "unread")}
-        text="Ungelesen ({unreadCount})"
-        selected={activeFilter === "unread"}
-      />
-      <Chip
-        text="Gelesen ({readCount})"
-        selected={activeFilter === "read"}
-        onclick={() => (activeFilter = "read")}
-      />
-      <Chip
-        text="Am lesen ({readingCount})"
-        selected={activeFilter === "reading"}
-        onclick={() => (activeFilter = "reading")}
-      />
-    </div>
   </div>
 
   <div class="books-container">
     {#if isLoading}
       <div class="status-view">
         <Loader size="48px" />
-        <p>Loading your library...</p>
+        <p>Loading your Wishlist...</p>
       </div>
     {:else if errorMessage}
       <div class="status-view error">
@@ -165,8 +118,8 @@
         {#if searchQuery}
           <p>No books found matching "{searchQuery}"</p>
         {:else}
-          <h3>Your library is empty</h3>
-          <p>Scan your first book to begin curating your shelves</p>
+          <h3>Your wishlist is empty</h3>
+          <p>Scan a book to start your list</p>
           <a href="/scanner" class="btn-primary">
             <CirclePlus size="18" />
             <span>Scan a Book</span>
@@ -212,13 +165,6 @@
     position: sticky;
     top: 0;
     z-index: 2;
-  }
-
-  .tags {
-    display: flex;
-    overflow-x: auto;
-    gap: 0.5rem;
-    cursor: pointer;
   }
 
   .books-container {
