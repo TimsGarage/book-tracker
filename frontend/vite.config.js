@@ -20,8 +20,10 @@ export default defineConfig(() => ({
     host: host || "127.0.0.1",
     proxy: {
       "/api": {
-        target: "http://127.0.0.1:8080",
+        // target: "http://127.0.0.1:8080",
+        target: "https://books.timsalokat.dev",
         changeOrigin: true,
+        followRedirects: true,
       },
     },
     hmr: host
