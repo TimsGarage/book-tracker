@@ -25,18 +25,8 @@ export async function createUser(username: string, password: string, customFetch
   const data = await res.json();
   return data.data;
 }
-
-export async function fetchOwnedBooks(customFetch?: typeof fetch): Promise<Book[]> {
-  const res = await authState.authFetch(`${API_BASE}/api/v1/books/owned`, {}, customFetch);
-  if (!res.ok) {
-    throw new Error(`Failed to fetch books: ${res.statusText}`);
-  }
-  const data = await res.json();
-  return data.data;
-}
-
-export async function fetchReadBooks(customFetch?: typeof fetch): Promise<Book[]> {
-  const res = await authState.authFetch(`${API_BASE}/api/v1/books/read`, {}, customFetch);
+export async function fetchMyBooks(customFetch?: typeof fetch): Promise<Book[]> {
+  const res = await authState.authFetch(`${API_BASE}/api/v1/books`, {}, customFetch);
   if (!res.ok) {
     throw new Error(`Failed to fetch books: ${res.statusText}`);
   }

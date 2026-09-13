@@ -1,8 +1,14 @@
 <script lang="ts">
-  import { CircleUserRound, LogOut, ShieldCheck } from "lucide-svelte";
+  import {
+    ChevronDown,
+    Circle,
+    CircleUserRound,
+    LogOut,
+    ShieldCheck,
+  } from "lucide-svelte";
   import { authState } from "$lib/auth.svelte";
   import { handleBack } from "$lib/util";
-  import type { TopNavState } from "../../../components/types";
+  import type { NavState } from "../../../lib/nav_helper";
   import { getContext } from "svelte";
   import Input from "../../../components/Input.svelte";
   import { createUser } from "$lib/api";
@@ -12,18 +18,22 @@
   }
 
   function resetNav() {
-    topNavState.heading = "Account";
-    topNavState.showBackButton = true;
-    topNavState.onBack = handleBack;
+    navState.heading = "Account";
+    navState.showBackButton = false;
+    navState.icon = CircleUserRound;
+    navState.onBack = handleBack;
+    navState.hideBottomNavigation = false;
   }
 
-  let topNavState = getContext<TopNavState>("topNavState");
-  if (topNavState) {
+  let navState = getContext<NavState>("navState");
+  if (navState) {
     resetNav();
   }
 
   let username = $state("");
   let password = $state("");
+
+  let show_admin_options = $state(false);
 </script>
 
 <div class="page">
@@ -53,12 +63,22 @@
     </button>
   </div>
 
-  <div class="card">
-    <h2>Add User</h2>
-    <Input label="Username" bind:value={username}></Input>
-    <Input label="Password" bind:value={password}></Input>
-    <button onclick={() => createUser(username, password)}>Submit</button>
-  </div>
+  {#if show_admin_options}
+    <div class="card">
+      <h2>Add User</h2>
+      <Input label="Username" bind:value={username}></Input>
+      <Input label="Password" bind:value={password}></Input>
+      <button onclick={() => createUser(username, password)}>Submit</button>
+    </div>
+  {:else}
+    <button
+      style="display: flex; align-items: center; justify-content: space-between; padding-inline: 1.5rem;"
+      onclick={() => (show_admin_options = true)}
+    >
+      Admin Section
+      <ChevronDown></ChevronDown>
+    </button>
+  {/if}
 </div>
 
 <style>
@@ -114,8 +134,8 @@
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    color: #dc2626;
-    border: 2px solid #ff5b5b;
+    color: var(--delete-red);
+    border: 2px solid var(--delete-red);
     padding: 0.75rem 1.5rem;
     border-radius: 0.5rem;
     cursor: pointer;

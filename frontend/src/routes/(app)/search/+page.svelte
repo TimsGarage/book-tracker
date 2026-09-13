@@ -1,68 +1,38 @@
 <script lang="ts">
   import { getContext, onMount } from "svelte";
-  import { Search, BookOpen, CirclePlus, Loader } from "lucide-svelte";
-  import { fetchReadBooks, fetchWishlistBooks } from "$lib/api";
+  import { Search, BookOpen, CirclePlus } from "lucide-svelte";
+  import Loader from "../../../components/Loader.svelte";
   import type { Book, BookReadingStatus } from "$lib/types";
   import { handleBack } from "$lib/util";
-  import type { TopNavState } from "../../../components/types";
-  import BookPage from "../../../components/BookPage.svelte";
+  import type { NavState } from "../../../lib/nav_helper";
+  import BookPage from "../../../components/BookPreview.svelte";
   import Input from "../../../components/Input.svelte";
   import BookCard from "../../../components/BookCard.svelte";
 
   let selectedBook: Book | null = $state(null);
 
   function resetNav() {
-    topNavState.heading = "Read Books";
-    topNavState.showBackButton = false;
-    topNavState.onBack = handleBack;
+    navState.heading = "Search Book";
+    navState.showBackButton = false;
+    navState.onBack = handleBack;
     selectedBook = null;
   }
 
-  let topNavState = getContext<TopNavState>("topNavState");
-  if (topNavState) {
+  let navState = getContext<NavState>("navState");
+  if (navState) {
     resetNav();
   }
 
   let books = $state<Book[]>([]);
-  let isLoading = $state(true);
+  let isLoading = $state(false);
   let errorMessage = $state("");
   let searchQuery = $state("");
 
-  async function loadBooks() {
-    isLoading = true;
-    errorMessage = "";
-    try {
-      books = await fetchReadBooks();
-    } catch (err: any) {
-      console.error("Failed to load books:", err);
-      errorMessage = err.message || "Failed to load library";
-    } finally {
-      isLoading = false;
-    }
-  }
-
-  onMount(() => {
-    loadBooks();
-  });
-
-  // 1. Filter books ONLY by search query
-  const filteredBooks = $derived(
-    books.filter((b: Book) => {
-      const q = searchQuery.toLowerCase().trim();
-      if (!q) return true;
-      return (
-        (b.title || "").toLowerCase().includes(q) ||
-        (b.author || "").toLowerCase().includes(q) ||
-        (b.isbn || "").toLowerCase().includes(q)
-      );
-    }),
-  );
-
   function selectBook(book: Book) {
-    if (topNavState) {
-      topNavState.heading = "Book Details";
-      topNavState.showBackButton = true;
-      topNavState.onBack = () => {
+    if (navState) {
+      navState.heading = "Book Details";
+      navState.showBackButton = true;
+      navState.onBack = () => {
         resetNav();
       };
     }
@@ -105,29 +75,25 @@
     {#if isLoading}
       <div class="status-view">
         <Loader size="48px" />
-        <p>Loading your Wishlist...</p>
+        <p>Searching...</p>
       </div>
     {:else if errorMessage}
       <div class="status-view error">
         <p>{errorMessage}</p>
-        <button onclick={loadBooks}>Retry</button>
+        <button onclick={() => []}>Retry</button>
       </div>
-    {:else if filteredBooks.length === 0}
+    {:else if books.length === 0}
       <div class="status-view empty">
         <BookOpen size="48" color="var(--accent-color)" />
         {#if searchQuery}
           <p>No books found matching "{searchQuery}"</p>
         {:else}
-          <h3>No read books yet</h3>
-          <p>Scan a book or mark one in your library as read</p>
-          <a href="/scanner" class="btn-primary">
-            <CirclePlus size="18" />
-            <span>Scan a Book</span>
-          </a>
+          <h3>Search for a book</h3>
+          <p>Add books to your library that you can't scan right now</p>
         {/if}
       </div>
     {:else}
-      {#each filteredBooks as book (book.id)}
+      {#each books as book (book.id)}
         <BookCard onclick={() => selectBook(book)} {book} />
       {/each}
     {/if}
@@ -160,7 +126,7 @@
     gap: 1rem;
     padding: 2rem 1rem;
     padding-bottom: 1rem;
-    border-bottom: 1px solid var(--outline);
+    /* border-bottom: 1px solid var(--outline); */
     background-color: var(--main-background);
     position: sticky;
     top: 0;
@@ -177,27 +143,15 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 4rem 2rem;
+    padding: 4rem;
     gap: 1rem;
     text-align: center;
     color: var(--text-muted);
+    height: 90%;
   }
 
   .status-view.empty h3 {
     color: var(--text);
     margin: 0;
-  }
-
-  .btn-primary {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    background-color: var(--accent-color);
-    color: var(--text-reversed);
-    padding: 0.75rem 1.5rem;
-    border-radius: 0.5rem;
-    text-decoration: none;
-    font-weight: 600;
-    margin-top: 0.5rem;
   }
 </style>

@@ -1,25 +1,27 @@
 <script lang="ts">
   import { ChevronLeft, CircleUserRound, Library } from "lucide-svelte";
   import { getContext } from "svelte";
-  import type { TopNavState } from "./types";
+  import type { NavState } from "../lib/nav_helper";
   import { handleBack } from "../lib/util";
 
-  let topNavState = getContext<TopNavState>("topNavState");
+  let navState = getContext<NavState>("navState");
+
+  let Icon = $derived(navState.icon ?? Library);
 </script>
 
 <nav class="topnav">
   <div class="content">
-    {#if topNavState.showBackButton}
+    {#if navState.showBackButton}
       <!-- svelte-ignore a11y_click_events_have_key_events -->
       <!-- svelte-ignore a11y_no_static_element_interactions -->
       <span
-        onclick={topNavState.onBack ? topNavState.onBack() : handleBack()}
+        onclick={navState.onBack ? navState.onBack() : handleBack()}
         style="height: 32px"><ChevronLeft size="32" /></span
       >
-    {:else}
-      <a href="/" style="height:32px"><Library size="32" /></a>
+    {:else if navState.icon}
+      <a href="/" class="icon"><Icon size="28" /></a>
     {/if}
-    <h3>{topNavState.heading}</h3>
+    <h3>{navState.heading}</h3>
   </div>
 </nav>
 
@@ -31,8 +33,22 @@
     background-color: var(--main-background);
   }
 
-  a {
-    color: var(--accent-color);
+  .icon {
+    height: 28px;
+    position: relative;
+    color: var(--main-background);
+  }
+
+  .icon::before {
+    z-index: -1;
+    content: "";
+    position: absolute;
+    width: calc(1.5rem + 30px + 0.75rem);
+    height: calc(30px + 1.25rem);
+    background-color: var(--accent-color);
+    left: -1.5rem;
+    top: -0.625rem;
+    border-radius: 0px 1.5rem 1.5rem 0px;
   }
 
   .content {
@@ -40,11 +56,10 @@
     border-bottom: 1px solid var(--outline);
     padding-top: 3rem; /* Padding to get rid of phone notch */
     padding-inline: 1.5rem;
-    display: grid;
-    grid-template-columns: 32px auto 32px;
+    display: flex;
     height: calc(3rem + 70px);
     align-items: center;
-    gap: 0.5rem;
+    gap: 1.25rem;
     overflow: hidden;
   }
 

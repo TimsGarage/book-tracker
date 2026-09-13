@@ -1,26 +1,20 @@
 <script lang="ts">
   import { getContext, onMount } from "svelte";
-  import { Search, BookOpen, CirclePlus, Loader } from "lucide-svelte";
+  import { Search, BookOpen, CirclePlus, Loader, Star } from "lucide-svelte";
   import { fetchWishlistBooks } from "$lib/api";
   import type { Book, BookReadingStatus } from "$lib/types";
   import { handleBack } from "$lib/util";
-  import type { TopNavState } from "../../../components/types";
-  import BookPage from "../../../components/BookPage.svelte";
-  import Input from "../../../components/Input.svelte";
+  import type { NavState } from "../../../lib/nav_helper";
   import BookCard from "../../../components/BookCard.svelte";
+  import { goto } from "$app/navigation";
 
-  let selectedBook: Book | null = $state(null);
-
-  function resetNav() {
-    topNavState.heading = "Wishlist";
-    topNavState.showBackButton = false;
-    topNavState.onBack = handleBack;
-    selectedBook = null;
-  }
-
-  let topNavState = getContext<TopNavState>("topNavState");
-  if (topNavState) {
-    resetNav();
+  let navState = getContext<NavState>("navState");
+  if (navState) {
+    navState.heading = "Wishlist";
+    navState.showBackButton = false;
+    navState.icon = Star;
+    navState.onBack = handleBack;
+    navState.hideBottomNavigation = false;
   }
 
   let books = $state<Book[]>([]);
@@ -57,49 +51,16 @@
       );
     }),
   );
-
-  function selectBook(book: Book) {
-    if (topNavState) {
-      topNavState.heading = "Book Details";
-      topNavState.showBackButton = true;
-      topNavState.onBack = () => {
-        resetNav();
-      };
-    }
-    selectedBook = book;
-  }
-
-  function onDelete(book: Book) {
-    // removeBookById(book.id);
-    resetNav();
-  }
-
-  function onUpdateSave(book: Book) {
-    // TODO add the update fetch here with the new book
-    console.log(book);
-    resetNav();
-  }
 </script>
 
 <div class="page">
-  {#if selectedBook != null}
-    <div class="book-page">
-      <BookPage
-        editMode
-        book={selectedBook}
-        deleteCallback={onDelete}
-        saveCallback={onUpdateSave}
-      ></BookPage>
-    </div>
-  {/if}
-
-  <div class="header">
+  <!-- <div class="header">
     <Input placeholder="Search for a Book" bind:value={searchQuery}>
       {#snippet icon()}
         <Search size="24" color="var(--text)" />
       {/snippet}
     </Input>
-  </div>
+  </div> -->
 
   <div class="books-container">
     {#if isLoading}
@@ -128,7 +89,7 @@
       </div>
     {:else}
       {#each filteredBooks as book (book.id)}
-        <BookCard onclick={() => selectBook(book)} {book} />
+        <BookCard onclick={() => goto("/" + book.id)} {book} />
       {/each}
     {/if}
   </div>
@@ -143,15 +104,6 @@
     flex-direction: column;
     background-color: var(--main-background);
     overflow-y: auto;
-  }
-
-  .book-page {
-    position: absolute;
-    top: 0;
-    left: 0;
-    height: 100%;
-    background-color: var(--main-background);
-    z-index: 5;
   }
 
   .header {

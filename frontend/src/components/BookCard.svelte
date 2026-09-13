@@ -8,7 +8,7 @@
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="book-preview" {onclick}>
+<div class="book-card" {onclick}>
   {#if loading_cover && book.thumbnail_link}
     <div class="thumbnail">
       <Loader size="32px" />
@@ -47,7 +47,7 @@
 </div>
 
 <style>
-  .book-preview {
+  .book-card {
     --height: 150px;
     width: 100%;
     height: var(--height);
@@ -63,7 +63,7 @@
     column-gap: 0.5rem;
   }
 
-  .book-preview > .thumbnail {
+  .book-card > .thumbnail {
     grid-area: thumbnail;
     height: 100%;
     width: 100%;
@@ -73,19 +73,19 @@
     justify-content: center;
   }
 
-  .book-preview .publisher {
+  .book-card .publisher {
     grid-area: publisher;
     display: flex;
     justify-content: space-between;
     align-items: center;
   }
 
-  .book-preview .main-info {
+  .book-card .main-info {
     grid-area: main-info;
     align-self: flex-start;
   }
 
-  .book-preview .additional-info {
+  .book-card .additional-info {
     grid-area: additional-info;
     height: fit-content;
     align-self: flex-end;

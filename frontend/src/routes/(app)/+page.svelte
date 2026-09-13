@@ -1,41 +1,43 @@
 <script lang="ts">
   import { getContext, onMount } from "svelte";
   import BookCard from "../../components/BookCard.svelte";
-  import type { TopNavState } from "../../components/types";
+  import { type NavState } from "../../lib/nav_helper";
   import Input from "../../components/Input.svelte";
   import Loader from "../../components/Loader.svelte";
-  import { Search, BookOpen, CirclePlus } from "lucide-svelte";
+  import { Search, BookOpen, CirclePlus, Icon, Library } from "lucide-svelte";
   import Chip from "../../components/Chip.svelte";
-  import { fetchOwnedBooks } from "$lib/api";
-  import type { Book, BookReadingStatus } from "$lib/types";
-  import BookPage from "../../components/BookPage.svelte";
-  import { handleBack } from "$lib/util";
+  import { fetchMyBooks } from "$lib/api";
+  import type {
+    Book,
+    BookOwnershipStatus,
+    BookReadingStatus,
+  } from "$lib/types";
+  import BookPage from "../../components/BookPreview.svelte";
+  import { handleBack, owning_options } from "$lib/util";
+  import Select from "../../components/Select.svelte";
+  import { goto } from "$app/navigation";
 
-  let selectedBook: Book | null = $state(null);
-
-  function resetNav() {
-    topNavState.heading = "Library";
-    topNavState.showBackButton = false;
-    topNavState.onBack = handleBack;
-    selectedBook = null;
-  }
-
-  let topNavState = getContext<TopNavState>("topNavState");
-  if (topNavState) {
-    resetNav();
+  let navState = getContext<NavState>("navState");
+  if (navState) {
+    navState.heading = "Library";
+    navState.showBackButton = false;
+    navState.onBack = handleBack;
+    navState.icon = Library;
+    navState.hideBottomNavigation = false;
   }
 
   let books = $state<Book[]>([]);
   let isLoading = $state(true);
   let errorMessage = $state("");
   let searchQuery = $state("");
-  let activeFilter = $state<"all" | BookReadingStatus>("all");
+  let activeOwnershipFilter = $state<"all" | BookOwnershipStatus>("all");
+  let activeReadingStatusFilter = $state<"all" | BookReadingStatus>("all");
 
   async function loadBooks() {
     isLoading = true;
     errorMessage = "";
     try {
-      books = await fetchOwnedBooks();
+      books = await fetchMyBooks();
     } catch (err: any) {
       console.error("Failed to load books:", err);
       errorMessage = err.message || "Failed to load library";
@@ -51,13 +53,22 @@
   // 1. Filter books ONLY by search query
   const searchMatchedBooks = $derived(
     books.filter((b: Book) => {
+      let searchMatched = false;
       const q = searchQuery.toLowerCase().trim();
-      if (!q) return true;
-      return (
+      if (!q) searchMatched = true;
+      searchMatched =
         (b.title || "").toLowerCase().includes(q) ||
         (b.author || "").toLowerCase().includes(q) ||
-        (b.isbn || "").toLowerCase().includes(q)
-      );
+        (b.isbn || "").toLowerCase().includes(q);
+
+      let ownershipFilterMatched = false;
+      if (activeOwnershipFilter === "all") {
+        ownershipFilterMatched = b.ownership_status !== "wishlist";
+      } else {
+        ownershipFilterMatched = b.ownership_status === activeOwnershipFilter;
+      }
+
+      return ownershipFilterMatched && searchMatched;
     }),
   );
 
@@ -75,75 +86,61 @@
   // 3. Derive final list by applying the active status tab filter
   const filteredBooks = $derived(
     searchMatchedBooks.filter((b) => {
-      if (activeFilter === "unread") return b.reading_status === "unread";
-      if (activeFilter === "read") return b.reading_status === "read";
-      if (activeFilter === "reading") return b.reading_status === "reading";
-      return true;
+      let readingFilterMatched = false;
+      if (activeReadingStatusFilter === "all") {
+        readingFilterMatched = true;
+      } else {
+        readingFilterMatched = b.reading_status === activeReadingStatusFilter;
+      }
+
+      return readingFilterMatched;
     }),
   );
-
-  function selectBook(book: Book) {
-    if (topNavState) {
-      topNavState.heading = "Book Details";
-      topNavState.showBackButton = true;
-      topNavState.onBack = () => {
-        resetNav();
-      };
-    }
-    selectedBook = book;
-  }
-
-  function onDelete(book: Book) {
-    // removeBookById(book.id);
-    resetNav();
-  }
-
-  function onUpdateSave(book: Book) {
-    // TODO add the update fetch here with the new book
-    console.log(book);
-    resetNav();
-  }
 </script>
 
 <div class="page">
-  {#if selectedBook != null}
-    <div class="book-page">
-      <BookPage
-        editMode
-        book={selectedBook}
-        deleteCallback={onDelete}
-        saveCallback={onUpdateSave}
-      ></BookPage>
-    </div>
-  {/if}
-
   <div class="header">
-    <Input placeholder="Search for a Book" bind:value={searchQuery}>
-      {#snippet icon()}
-        <Search size="24" color="var(--text)" />
-      {/snippet}
-    </Input>
+    <div
+      class="group"
+      style="display: grid; grid-template-columns: 60% 40%; gap: .25rem;"
+    >
+      <Input placeholder="Search for a Book" bind:value={searchQuery}>
+        {#snippet icon()}
+          <Search size="24" color="var(--text)" />
+        {/snippet}
+      </Input>
+      <Select
+        bind:value={activeOwnershipFilter}
+        options={[
+          {
+            title: "All Books",
+            value: "all",
+          },
+          ...owning_options.filter((e) => !(e.value == "wishlist")),
+        ]}
+      />
+    </div>
 
     <div class="tags">
       <Chip
-        onclick={() => (activeFilter = "all")}
+        onclick={() => (activeReadingStatusFilter = "all")}
         text="All Books ({filteredBooks.length})"
-        selected={activeFilter === "all"}
+        selected={activeReadingStatusFilter === "all"}
       />
       <Chip
-        onclick={() => (activeFilter = "unread")}
-        text="Ungelesen ({unreadCount})"
-        selected={activeFilter === "unread"}
+        onclick={() => (activeReadingStatusFilter = "unread")}
+        text="Unread ({unreadCount})"
+        selected={activeReadingStatusFilter === "unread"}
       />
       <Chip
-        text="Gelesen ({readCount})"
-        selected={activeFilter === "read"}
-        onclick={() => (activeFilter = "read")}
+        text="Read ({readCount})"
+        selected={activeReadingStatusFilter === "read"}
+        onclick={() => (activeReadingStatusFilter = "read")}
       />
       <Chip
-        text="Am lesen ({readingCount})"
-        selected={activeFilter === "reading"}
-        onclick={() => (activeFilter = "reading")}
+        text="Reading ({readingCount})"
+        selected={activeReadingStatusFilter === "reading"}
+        onclick={() => (activeReadingStatusFilter = "reading")}
       />
     </div>
   </div>
@@ -175,7 +172,7 @@
       </div>
     {:else}
       {#each filteredBooks as book (book.id)}
-        <BookCard onclick={() => selectBook(book)} {book} />
+        <BookCard onclick={() => goto("/" + book.id)} {book} />
       {/each}
     {/if}
   </div>
@@ -192,22 +189,12 @@
     overflow-y: auto;
   }
 
-  .book-page {
-    position: absolute;
-    top: 0;
-    left: 0;
-    height: 100%;
-    background-color: var(--main-background);
-    z-index: 5;
-  }
-
   .header {
     display: flex;
     flex-direction: column;
     gap: 1rem;
     padding: 2rem 1rem;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid var(--outline);
+    padding-bottom: 0px;
     background-color: var(--main-background);
     position: sticky;
     top: 0;
@@ -231,7 +218,8 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 4rem 2rem;
+    padding: 4rem;
+    height: 90%;
     gap: 1rem;
     text-align: center;
     color: var(--text-muted);

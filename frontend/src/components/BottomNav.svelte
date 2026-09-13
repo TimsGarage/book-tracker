@@ -9,21 +9,28 @@
     Scan,
     ScanBarcode,
     Settings,
+    Star,
   } from "lucide-svelte";
   import BottomNavItem from "./BottomNavItem.svelte";
+  import { getContext } from "svelte";
+  import type { NavState } from "$lib/nav_helper";
+
+  let navState = getContext<NavState>("navState");
 </script>
 
-<nav class="bottomnav">
-  <div class="content">
-    <BottomNavItem Icon={Library} link="/"></BottomNavItem>
-    <BottomNavItem Icon={Bookmark} link="/wishlist"></BottomNavItem>
-    <a class="scanner" href="/scanner">
-      <ScanBarcode></ScanBarcode>
-    </a>
-    <BottomNavItem Icon={BookSearch} link="/read"></BottomNavItem>
-    <BottomNavItem Icon={CircleUserRound} link="/profile"></BottomNavItem>
-  </div>
-</nav>
+{#if !navState.hideBottomNavigation}
+  <nav class="bottomnav">
+    <div class="content">
+      <BottomNavItem Icon={Library} link="/"></BottomNavItem>
+      <BottomNavItem Icon={Star} link="/wishlist"></BottomNavItem>
+      <a class="scanner" href="/scanner">
+        <ScanBarcode></ScanBarcode>
+      </a>
+      <BottomNavItem Icon={BookSearch} link="/search"></BottomNavItem>
+      <BottomNavItem Icon={CircleUserRound} link="/profile"></BottomNavItem>
+    </div>
+  </nav>
+{/if}
 
 <style>
   .bottomnav {

@@ -52,7 +52,7 @@ func SetupRouter(db *gorm.DB, cfg *config.Config) *gin.Engine {
 		{
 			books.GET("/", bookHandler.GetMyBooks)
 			books.GET("/owned", bookHandler.GetOwnedBooks)
-			books.GET("/read", bookHandler.GetReadBooks)
+			books.GET("/search", bookHandler.GetReadBooks)
 			books.GET("/wishlist", bookHandler.GetWishlistBooks)
 			books.GET("/:id", bookHandler.GetBook)
 			books.POST("", bookHandler.CreateBook)

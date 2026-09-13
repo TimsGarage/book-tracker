@@ -1,5 +1,5 @@
 import { goto } from "$app/navigation";
-import { BookCheck, BookDown, Bookmark, BookMarked, BookmarkX, BookOpenText, Library } from "lucide-svelte";
+import { BookCheck, BookDown, Bookmark, BookMarked, BookmarkX, BookOpenText, Library, Star } from "lucide-svelte";
 import type { BookOwnershipStatus, BookReadingStatus } from "./types";
 
 export function handleBack() {
@@ -54,15 +54,15 @@ export const owning_options: {
     {
       title: "Unowned",
       value: "unowned",
-      icon: BookmarkX,
+      icon: Bookmark,
     },
     {
       title: "Wishlist",
       value: "wishlist",
-      icon: Bookmark,
+      icon: Star,
     },
     {
-      title: "Ausgeliehen",
+      title: "Borrowed",
       value: "borrowed",
       icon: BookDown,
     },

@@ -6,16 +6,17 @@
     requestPermissions,
   } from "@tauri-apps/plugin-barcode-scanner";
   import { getContext, onDestroy, onMount } from "svelte";
-  import type { TopNavState } from "../../../components/types";
+  import type { NavState } from "../../../lib/nav_helper";
   import { handleBack, owning_options, read_options } from "../../../lib/util";
   import { lookupIsbn, createBook } from "$lib/api";
   import { goto } from "$app/navigation";
   import type { LookupBook, Book } from "$lib/types";
-  import BookPage from "../../../components/BookPage.svelte";
+  import BookPage from "../../../components/BookPreview.svelte";
 
-  let topNavState = getContext<TopNavState>("topNavState");
-  topNavState.heading = "Scanner";
-  topNavState.showBackButton = true;
+  let navState = getContext<NavState>("navState");
+  navState.heading = "Scanner";
+  navState.showBackButton = true;
+  navState.hideBottomNavigation = true;
 
   let isbn = $state("");
   let isScanning = $state(false); // Track scanning state

@@ -4,6 +4,7 @@
   import { getTodayString, owning_options, read_options } from "$lib/util";
   import type { Book, LookupBook } from "$lib/types";
   import { Save, Trash } from "lucide-svelte";
+  import Loader from "./Loader.svelte";
 
   let {
     book = $bindable(),
@@ -26,8 +27,9 @@
   }
 
   let myBook = $state(book);
-  console.log(myBook);
   myBook.owned_since = myBook.owned_since ?? getTodayString();
+
+  let loading_cover = $state(true);
 </script>
 
 <div class="bookpreview" style="margin-bottom: 1.5rem;">
@@ -43,13 +45,22 @@
     </button>
   {/if}
 
-  {#if myBook.thumbnail_link}
-    <img
-      class="thumbnail"
-      src={myBook.thumbnail_link}
-      alt={myBook.title || "cover"}
-    />
-  {/if}
+  <div class="thumbnail">
+    {#if loading_cover}
+      <Loader size="64px"></Loader>
+    {/if}
+    {#if myBook.thumbnail_link}
+      <img
+        onload={() => {
+          loading_cover = false;
+        }}
+        onerror={() => (loading_cover = false)}
+        src={myBook.thumbnail_link}
+        alt={myBook.title || "cover"}
+      />
+    {/if}
+  </div>
+
   <h1 class="title">{myBook.title}</h1>
   <h3 class="author">
     {myBook.author}
@@ -90,6 +101,7 @@
     gap: 0.5rem;
     padding: 1.5rem;
     height: 100%;
+    width: 100%;
     overflow: hidden;
   }
 
@@ -137,6 +149,12 @@
     color: var(--main-background);
   }
 
+  .deleteButton {
+    color: var(--delete-red);
+    background-color: transparent;
+    border: 2px solid var(--delete-red);
+  }
+
   .saveButton {
     /* Claculate deleteButtonTop + deletebuttonsize + padding */
     top: calc(1.5rem + 64px + 0.5rem);
@@ -144,8 +162,17 @@
 
   .thumbnail {
     max-width: 250px;
-    min-height: 100px;
+    min-height: 300px;
     flex-shrink: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .thumbnail img {
+    object-fit: contain;
+    max-width: 100%;
   }
 
   .title {

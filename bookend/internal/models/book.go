@@ -13,7 +13,7 @@ type Book struct {
 
 	OwnershipStatus string `gorm:"type:varchar(20);check:ownership_status IN ('wishlist', 'unowned', 'owned', 'borrowed')" json:"ownership_status" form:"ownership_status"`
 	OwnedSince      string `json:"owned_since" form:"owned_since"`
-	ReadingStatus   string `gorm:"type:varchar(20);check:reading_status IN ('unread', 'reading', 'reading')" json:"reading_status" form:"reading_status"`
+	ReadingStatus   string `gorm:"type:varchar(20);check:reading_status IN ('unread', 'reading', 'read')" json:"reading_status" form:"reading_status"`
 
 	UserId uint `gorm:"not null"` // Foreign key to assign books to a user
 }
