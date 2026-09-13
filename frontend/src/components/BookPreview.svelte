@@ -8,12 +8,14 @@
 
   let {
     book = $bindable(),
-    editMode = false,
+    showSaveButton = false,
+    showDeleteButton = false,
     deleteCallback = ({}) => {},
     saveCallback = ({}) => {},
   }: {
     book: Book;
-    editMode?: boolean;
+    showSaveButton?: boolean;
+    showDeleteButton?: boolean;
     deleteCallback?: (book: Book) => void;
     saveCallback?: (book: Book) => void;
   } = $props();
@@ -36,14 +38,18 @@
   <span class="decoration-1"></span>
   <span class="decoration-2"></span>
 
-  {#if editMode}
-    <button class="deleteButton" onclick={onDelete}>
-      <Trash></Trash>
-    </button>
-    <button class="saveButton" onclick={onSave}>
-      <Save></Save>
-    </button>
-  {/if}
+  <div class="floating-buttons">
+    {#if showDeleteButton}
+      <button class="deleteButton" onclick={onDelete}>
+        <Trash></Trash>
+      </button>
+    {/if}
+    {#if showSaveButton}
+      <button class="saveButton" onclick={onSave}>
+        <Save></Save>
+      </button>
+    {/if}
+  </div>
 
   <div class="thumbnail">
     {#if loading_cover}
@@ -133,10 +139,6 @@
 
   .deleteButton,
   .saveButton {
-    position: absolute;
-    z-index: 5;
-    right: 1.5rem;
-    top: 1.5rem;
     min-width: unset;
     min-height: unset;
     height: 64px;
@@ -149,15 +151,20 @@
     color: var(--main-background);
   }
 
+  .floating-buttons {
+    position: absolute;
+    z-index: 5;
+    right: 1.5rem;
+    top: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
   .deleteButton {
     color: var(--delete-red);
     background-color: transparent;
     border: 2px solid var(--delete-red);
-  }
-
-  .saveButton {
-    /* Claculate deleteButtonTop + deletebuttonsize + padding */
-    top: calc(1.5rem + 64px + 0.5rem);
   }
 
   .thumbnail {

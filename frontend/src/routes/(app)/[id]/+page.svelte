@@ -1,15 +1,11 @@
 <script lang="ts">
-  import { fetchBookById } from "$lib/api";
+  import { fetchBookById, removeBookById, updateBook } from "$lib/api";
   import type { PageProps } from "./$types";
   let { params }: PageProps = $props();
   import { getContext, onMount } from "svelte";
   import { type NavState } from "../../../lib/nav_helper";
   import Loader from "../../../components/Loader.svelte";
-  import type {
-    Book,
-    BookOwnershipStatus,
-    BookReadingStatus,
-  } from "$lib/types";
+  import type { Book } from "$lib/types";
   import BookPage from "../../../components/BookPreview.svelte";
   import { handleBack, owning_options } from "$lib/util";
   let navState = getContext<NavState>("navState");
@@ -42,12 +38,13 @@
   });
 
   function onDelete(book: Book) {
-    // removeBookById(book.id);
+    removeBookById(book.id);
+    handleBack();
   }
 
   function onUpdateSave(book: Book) {
-    // TODO add the update fetch here with the new book
-    console.log(book);
+    updateBook(book);
+    handleBack();
   }
 </script>
 
@@ -64,7 +61,8 @@
     </div>
   {:else if book != null}
     <BookPage
-      editMode
+      showDeleteButton
+      showSaveButton
       {book}
       deleteCallback={onDelete}
       saveCallback={onUpdateSave}

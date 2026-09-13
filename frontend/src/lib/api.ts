@@ -85,6 +85,26 @@ export async function createBook(book: Book, customFetch?: typeof fetch): Promis
   return data.data;
 }
 
+export async function updateBook(book: Book, customFetch?: typeof fetch): Promise<Book> {
+  const baseUrl = `${API_BASE}/api/v1/books/${book.id}`;
+  const url = new URL(baseUrl, typeof window !== "undefined" ? window.location.origin : "http://localhost");
+
+  const res = await authState.authFetch(
+    url.toString(),
+    {
+      method: "PUT",
+      body: JSON.stringify(book),
+    },
+    customFetch
+  );
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || `Failed to update book: ${res.statusText}`);
+  }
+  const data = await res.json();
+  return data.data;
+}
+
 export async function removeBookById(id: number, customFetch?: typeof fetch): Promise<any> {
   const res = await authState.authFetch(`${API_BASE}/api/v1/books/${id}`, {method: "DELETE"}, customFetch);
   if (!res.ok) {

@@ -54,14 +54,6 @@
 </script>
 
 <div class="page">
-  <!-- <div class="header">
-    <Input placeholder="Search for a Book" bind:value={searchQuery}>
-      {#snippet icon()}
-        <Search size="24" color="var(--text)" />
-      {/snippet}
-    </Input>
-  </div> -->
-
   <div class="books-container">
     {#if isLoading}
       <div class="status-view">
@@ -106,19 +98,6 @@
     overflow-y: auto;
   }
 
-  .header {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    padding: 2rem 1rem;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid var(--outline);
-    background-color: var(--main-background);
-    position: sticky;
-    top: 0;
-    z-index: 2;
-  }
-
   .books-container {
     flex: 1;
     overflow-y: auto;
@@ -129,7 +108,8 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 4rem 2rem;
+    padding: 4rem;
+    height: 90%;
     gap: 1rem;
     text-align: center;
     color: var(--text-muted);

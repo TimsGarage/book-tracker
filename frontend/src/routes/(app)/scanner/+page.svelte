@@ -12,6 +12,8 @@
   import { goto } from "$app/navigation";
   import type { LookupBook, Book } from "$lib/types";
   import BookPage from "../../../components/BookPreview.svelte";
+  import Loader from "../../../components/Loader.svelte";
+  import { MonitorX } from "lucide-svelte";
 
   let navState = getContext<NavState>("navState");
   navState.heading = "Scanner";
@@ -101,27 +103,19 @@
     {#if isbn}
       {#if bookPromise}
         {#await bookPromise}
-          <h2 style="margin: auto">Fetching book...</h2>
+          <div class="status-view">
+            <Loader size="48px"></Loader>
+            <p>Looking for your book...</p>
+          </div>
         {:then lookedUpBook}
           <BookPage
-            editMode
+            showSaveButton
             book={lookedUpBook}
             saveCallback={(book: Book) => {
               handleAddBook(book);
             }}
             deleteCallback={scanBook}
           ></BookPage>
-
-          <!-- <div class="button-group" style="margin-top: auto;">
-            <button onclick={scanBook}>Rescan</button>
-            <button
-              class="Primary"
-              disabled={isAdding}
-              onclick={() => handleAddBook(lookedUpBook)}
-            >
-              {isAdding ? "Adding..." : "Add to Library"}
-            </button>
-          </div> -->
         {:catch err}
           <div style="text-align: center; margin: auto; padding: 1rem;">
             <p style="color: var(--text-muted); margin-bottom: 1rem;">
@@ -137,19 +131,20 @@
           cancelScan();
           handleBack();
         }}
-        style="width: 100%;">Cancel</button
+        style="margin: 2rem; margin-bottom: 0px;">Cancel</button
       >
     {:else}
-      <div
-        class="button-group"
-        style="grid-row: 2; display: flex; align-items:center"
-      >
-        <button onclick={scanBook} style="width: 100%;" class="Primary"
-          >Start Scan</button
+      <div class="status-view">
+        <MonitorX color="var(--text)" size="48"></MonitorX>
+        <h5>Something went wrong.</h5>
+        <button
+          onclick={scanBook}
+          style="width: 100%; min-height: unset; padding: .75rem 1.5rem;"
+          class="Primary">Try again</button
         >
-        <!-- TODO dev stuff -->
-        <button onclick={getFixed} style="width: 100%;">Get Fixed</button>
       </div>
+      <!-- TODO dev stuff -->
+      <!-- <button onclick={getFixed} style="width: 100%;">Get Fixed</button> -->
     {/if}
   </div>
 </div>
@@ -206,11 +201,15 @@
     grid-template-rows: calc(100% - 64px) 64px;
   }
 
-  .popup .button-group {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.5rem;
-    width: 100%;
-    padding-inline: 1.5rem;
+  .status-view {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: auto;
+    padding: 4rem;
+    gap: 1rem;
+    text-align: center;
+    color: var(--text-muted);
   }
 </style>

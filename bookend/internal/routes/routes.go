@@ -51,11 +51,10 @@ func SetupRouter(db *gorm.DB, cfg *config.Config) *gin.Engine {
 		books.Use(authMiddleware)
 		{
 			books.GET("/", bookHandler.GetMyBooks)
-			books.GET("/owned", bookHandler.GetOwnedBooks)
-			books.GET("/search", bookHandler.GetReadBooks)
 			books.GET("/wishlist", bookHandler.GetWishlistBooks)
 			books.GET("/:id", bookHandler.GetBook)
 			books.POST("", bookHandler.CreateBook)
+			books.PUT("/:id", bookHandler.UpdateBook)
 			books.DELETE("/:id", bookHandler.DeleteBook)
 		}
 

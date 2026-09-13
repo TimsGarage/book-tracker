@@ -40,28 +40,6 @@ func (h *BookHandler) GetMyBooks(c *gin.Context) {
 	})
 }
 
-// GetBooks returns all books
-// GET /api/v1/books
-func (h *BookHandler) GetOwnedBooks(c *gin.Context) {
-	var books []models.Book
-
-	query := h.db.Order("id desc")
-	if userID, ok := middleware.GetUserID(c); ok && userID != 0 {
-		query = query.Where("user_id = ?", userID)
-	}
-	query = query.Where("ownership_status = ?", "owned")
-
-	if err := query.Find(&books).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch books"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"data":  books,
-		"count": len(books),
-	})
-}
-
 func (h *BookHandler) GetWishlistBooks(c *gin.Context) {
 	var books []models.Book
 
@@ -70,26 +48,6 @@ func (h *BookHandler) GetWishlistBooks(c *gin.Context) {
 		query = query.Where("user_id = ?", userID)
 	}
 	query = query.Where("ownership_status = ?", "wishlist")
-
-	if err := query.Find(&books).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch books"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"data":  books,
-		"count": len(books),
-	})
-}
-
-func (h *BookHandler) GetReadBooks(c *gin.Context) {
-	var books []models.Book
-
-	query := h.db.Order("id desc")
-	if userID, ok := middleware.GetUserID(c); ok && userID != 0 {
-		query = query.Where("user_id = ?", userID)
-	}
-	query = query.Where("reading_status = ?", "read")
 
 	if err := query.Find(&books).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch books"})
@@ -187,56 +145,58 @@ func (h *BookHandler) CreateBook(c *gin.Context) {
 	})
 }
 
-// // UpdateBook updates an existing book
-// // PUT /api/v1/books/:id
-// func (h *BookHandler) UpdateBook(c *gin.Context) {
-// 	idStr := c.Param("id")
-// 	id, err := strconv.ParseUint(idStr, 10, 32)
-// 	if err != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid book ID"})
-// 		return
-// 	}
+// UpdateBook updates an existing book
+// PUT /api/v1/books/:id
+func (h *BookHandler) UpdateBook(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid book ID"})
+		return
+	}
 
-// 	var book models.Book
-// 	if err := h.db.First(&book, id).Error; err != nil {
-// 		if errors.Is(err, gorm.ErrRecordNotFound) {
-// 			c.JSON(http.StatusNotFound, gin.H{"error": "Book not found"})
-// 			return
-// 		}
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve book"})
-// 		return
-// 	}
+	query := h.db
+	if userID, ok := middleware.GetUserID(c); ok {
+		query = query.Where("user_id = ?", userID)
+	}
 
-// 	var input models.UpdateBookInput
-// 	if err := c.ShouldBindJSON(&input); err != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-// 		return
-// 	}
+	var book models.Book
+	if err := query.First(&book, id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Book not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve book"})
+		return
+	}
 
-// 	updates := map[string]interface{}{}
-// 	if input.Title != "" {
-// 		updates["title"] = input.Title
-// 	}
-// 	if input.Author != "" {
-// 		updates["author"] = input.Author
-// 	}
-// 	if input.Description != "" {
-// 		updates["description"] = input.Description
-// 	}
-// 	if input.Status != "" {
-// 		updates["status"] = input.Status
-// 	}
+	var input models.Book
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 
-// 	if err := h.db.Model(&book).Updates(updates).Error; err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update book"})
-// 		return
-// 	}
+	updates := map[string]interface{}{}
+	if input.OwnershipStatus != "" {
+		updates["ownership_status"] = input.OwnershipStatus
+	}
+	if input.OwnedSince != "" {
+		updates["owned_since"] = input.OwnedSince
+	}
+	if input.ReadingStatus != "" {
+		updates["reading_status"] = input.ReadingStatus
+	}
 
-// 	c.JSON(http.StatusOK, gin.H{
-// 		"message": "Book updated successfully",
-// 		"data":    book,
-// 	})
-// }
+	if err := h.db.Model(&book).Updates(updates).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update book"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Book updated successfully",
+		"data":    book,
+	})
+}
 
 // DeleteBook removes a book by ID (soft delete via GORM)
 // DELETE /api/v1/books/:id
@@ -248,10 +208,13 @@ func (h *BookHandler) DeleteBook(c *gin.Context) {
 		return
 	}
 
-	// TODO add check that book is owned by that person
+	query := h.db
+	if userID, ok := middleware.GetUserID(c); ok {
+		query = query.Where("user_id = ?", userID)
+	}
 
 	var book models.Book
-	if err := h.db.First(&book, id).Error; err != nil {
+	if err := query.First(&book, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Book not found"})
 			return
