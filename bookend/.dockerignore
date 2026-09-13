@@ -1,0 +1,33 @@
+# Git
+.git
+.gitignore
+
+# Go build and test artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+bookend
+
+# SQLite database files and journals
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Environment and local secret files
+.env
+.env.*
+!.env.example
+
+# IDE & system metadata
+.vscode/
+.idea/
+.DS_Store
+
+# Documentation
+README.md
+

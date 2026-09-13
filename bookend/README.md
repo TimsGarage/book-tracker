@@ -49,6 +49,51 @@ bookend/
 2. **Open in browser**:
    Visit `http://localhost:8080` to see the live server-rendered template, view the catalog, and interactively add/delete books.
 
+### Running with Docker
+
+1. **Build the image**:
+   ```bash
+   # From the bookend directory:
+   docker build -t bookend:latest .
+
+   # Or from repository root:
+   docker build -t bookend:latest -f bookend/Dockerfile ./bookend
+   ```
+
+2. **Run container with persistent data volume**:
+   ```bash
+   docker run -d \
+     --name bookend \
+     -p 8080:8080 \
+     -v bookend_data:/data \
+     -e JWT_SECRET="your-production-secret" \
+     -e ADMIN_USERNAME="admin" \
+     -e ADMIN_PASSWORD="securepassword" \
+     bookend:latest
+   ```
+
+3. **Using prebuilt image from GitHub Container Registry (GHCR)**:
+   ```bash
+   docker run -d \
+     --name bookend \
+     -p 8080:8080 \
+     -v bookend_data:/data \
+     ghcr.io/timsgarage/book-tracker/backend:latest
+   ```
+
+4. **Running with Docker Compose**:
+   From the repository root:
+   ```bash
+   # Start the service in the background:
+   docker compose up -d
+
+   # View logs:
+   docker compose logs -f backend
+
+   # Stop the service:
+   docker compose down
+   ```
+
 ## API Endpoints
 
 | Method | Endpoint | Description |

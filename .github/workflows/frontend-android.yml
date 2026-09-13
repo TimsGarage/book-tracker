@@ -1,0 +1,177 @@
+name: Build and Release Frontend Android APK
+
+'on':
+  workflow_dispatch:
+    inputs:
+      backend_url:
+        description: 'Backend API URL (e.g. https://api.mybooktracker.com)'
+        required: true
+        type: string
+        default: ''
+      build_type:
+        description: 'Build Flavor'
+        required: false
+        default: 'release'
+        type: choice
+        options:
+          - release
+          - debug
+      targets:
+        description: 'Target CPU Architectures'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - 'all'
+          - 'aarch64'
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+env:
+  VITE_API_URL: ${{ inputs.backend_url || vars.VITE_API_URL || secrets.VITE_API_URL }}
+  BUILD_TYPE: ${{ inputs.build_type || 'release' }}
+  TARGET_ARCH: ${{ inputs.targets || 'all' }}
+
+jobs:
+  build-apk:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate Backend URL
+        run: |
+          if [ -z "$VITE_API_URL" ]; then
+            echo "::error::No backend URL provided!"
+            echo "Please provide 'backend_url' when triggering manually, or configure 'vars.VITE_API_URL' in GitHub repository settings (Settings > Secrets and variables > Actions > Variables)."
+            exit 1
+          fi
+          echo "Target backend URL: $VITE_API_URL"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android NDK
+        run: |
+          NDK_VERSION="26.1.10909125"
+          if [ ! -d "$ANDROID_HOME/ndk/$NDK_VERSION" ]; then
+            echo "Installing Android NDK $NDK_VERSION..."
+            yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;$NDK_VERSION"
+          fi
+          echo "NDK_HOME=$ANDROID_HOME/ndk/$NDK_VERSION" >> $GITHUB_ENV
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/$NDK_VERSION" >> $GITHUB_ENV
+
+      - name: Setup Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: frontend/src-tauri
+
+      - name: Install Frontend Dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build Android APK
+        working-directory: frontend
+        env:
+          VITE_API_URL: ${{ env.VITE_API_URL }}
+        run: |
+          BUILD_ARGS="--apk"
+          if [ "$BUILD_TYPE" = "debug" ]; then
+            BUILD_ARGS="$BUILD_ARGS --debug"
+          fi
+          if [ "$TARGET_ARCH" = "aarch64" ]; then
+            BUILD_ARGS="$BUILD_ARGS --target aarch64"
+          fi
+          echo "Executing: npm run tauri android build -- $BUILD_ARGS"
+          npm run tauri android build -- $BUILD_ARGS
+
+      - name: Sign APK (Personal / Custom Key)
+        if: env.BUILD_TYPE == 'release'
+        run: |
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)
+          echo "Using apksigner: $APKSIGNER"
+
+          if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
+            echo "Signing with provided repository secrets..."
+            KEYSTORE_FILE="/tmp/custom-release.keystore"
+            echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$KEYSTORE_FILE"
+            KS_PASS="${{ secrets.ANDROID_KEYSTORE_PASSWORD }}"
+            KEY_PASS="${{ secrets.ANDROID_KEY_PASSWORD }}"
+            KEY_ALIAS="${{ secrets.ANDROID_KEY_ALIAS }}"
+          else
+            echo "No custom keystore secrets found. Generating personal key for immediate installation on personal devices..."
+            KEYSTORE_FILE="/tmp/personal-release.keystore"
+            keytool -genkeypair -v \
+              -keystore "$KEYSTORE_FILE" \
+              -alias personal \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -storepass personalpass \
+              -keypass personalpass \
+              -dname "CN=BookTracker, OU=Personal, O=Personal, L=Home, ST=Home, C=US"
+            KS_PASS="personalpass"
+            KEY_PASS="personalpass"
+            KEY_ALIAS="personal"
+          fi
+
+          find frontend/src-tauri/gen/android/app/build/outputs/apk -name "*-unsigned.apk" | while read -r unsigned_apk; do
+            signed_apk="${unsigned_apk%-unsigned.apk}.apk"
+            echo "Signing $unsigned_apk -> $signed_apk"
+            "$APKSIGNER" sign \
+              --ks "$KEYSTORE_FILE" \
+              --ks-pass pass:"$KS_PASS" \
+              --key-pass pass:"$KEY_PASS" \
+              --ks-key-alias "$KEY_ALIAS" \
+              --out "$signed_apk" \
+              "$unsigned_apk"
+          done
+
+      - name: Collect Output APKs
+        run: |
+          mkdir -p release-apks
+          # Copy signed APKs (skip unsigned versions if signed version exists)
+          find frontend/src-tauri/gen/android/app/build/outputs/apk -name "*.apk" ! -name "*-unsigned.apk" -exec cp {} release-apks/ \;
+          if [ -z "$(ls -A release-apks)" ]; then
+            find frontend/src-tauri/gen/android/app/build/outputs/apk -name "*.apk" -exec cp {} release-apks/ \;
+          fi
+          echo "Generated APKs:"
+          ls -lh release-apks/
+
+      - name: Upload APK Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: book-tracker-apk
+          path: release-apks/*.apk
+          retention-days: 30
+
+      - name: Publish to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-apks/*.apk
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+

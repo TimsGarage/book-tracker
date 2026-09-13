@@ -2,7 +2,7 @@ import { browser } from '$app/environment';
 import { goto } from '$app/navigation';
 import type { User, AuthResponse, LoginCredentials } from './types';
 
-export const API_BASE = import.meta.env.VITE_API_URL || '';
+export const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
 
 class AuthStore {
   user = $state<User | null>(null);
