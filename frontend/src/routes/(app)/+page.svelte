@@ -18,6 +18,7 @@
   import { goto } from "$app/navigation";
   import ListView from "../../components/ListView.svelte";
   import GridView from "../../components/GridView.svelte";
+  import { createPersistentState } from "$lib/storage.svelte";
 
   let navState = getContext<NavState>("navState");
   if (navState) {
@@ -28,10 +29,14 @@
     navState.hideBottomNavigation = false;
   }
 
+  const viewMode = createPersistentState<"grid" | "list">(
+    "book_view_mode",
+    "list",
+  );
+
   let books = $state<Book[]>([]);
   let isLoading = $state(true);
   let errorMessage = $state("");
-  let gridView = $state(true);
   let searchQuery = $state("");
   let activeOwnershipFilter = $state<"all" | BookOwnershipStatus>("all");
   let activeReadingStatusFilter = $state<"all" | BookReadingStatus>("all");
@@ -148,11 +153,13 @@
     </div>
 
     <div class="view">
-      <button class:active={!gridView} onclick={() => (gridView = false)}
-        >List</button
+      <button
+        class:active={viewMode.current == "list"}
+        onclick={() => (viewMode.current = "list")}>List</button
       >
-      <button class:active={gridView} onclick={() => (gridView = true)}
-        >Grid</button
+      <button
+        class:active={viewMode.current == "grid"}
+        onclick={() => (viewMode.current = "grid")}>Grid</button
       >
     </div>
   </div>
@@ -182,7 +189,7 @@
           </a>
         {/if}
       </div>
-    {:else if gridView}
+    {:else if viewMode.current == "grid"}
       <GridView books={filteredBooks} />
     {:else}
       <ListView books={filteredBooks} />

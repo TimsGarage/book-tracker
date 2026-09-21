@@ -12,12 +12,16 @@ export function handleBack() {
 
 
 export function getTodayString(): string {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, "0");
-    const day = String(today.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  }
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+export const UNREAD_ICON = BookMarked;
+export const READING_ICON = BookOpenText;
+export const READ_ICON = BookCheck;
 
 export const read_options: {
   title: string,
@@ -27,19 +31,25 @@ export const read_options: {
     {
       title: "Ungelesen",
       value: "unread",
-      icon: BookMarked,
+      icon: UNREAD_ICON,
     },
     {
       title: "Am lesen",
       value: "reading",
-      icon: BookOpenText,
+      icon: READING_ICON,
     },
     {
       title: "Gelesen",
       value: "read",
-      icon: BookCheck,
+      icon: READ_ICON,
     },
   ];
+
+
+export const OWNED_ICON = Library;
+export const UNOWNED_ICON = Bookmark;
+export const WISHLIST_ICON = Star;
+export const BORROWED_ICON = BookDown;
 
 export const owning_options: {
   title: string;
@@ -49,21 +59,21 @@ export const owning_options: {
     {
       title: "Owned",
       value: "owned",
-      icon: Library,
+      icon: OWNED_ICON,
     },
     {
       title: "Unowned",
       value: "unowned",
-      icon: Bookmark,
+      icon: UNOWNED_ICON,
     },
     {
       title: "Wishlist",
       value: "wishlist",
-      icon: Star,
+      icon: WISHLIST_ICON,
     },
     {
       title: "Borrowed",
       value: "borrowed",
-      icon: BookDown,
+      icon: BORROWED_ICON,
     },
   ];
