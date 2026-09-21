@@ -15,5 +15,5 @@
 - [ ] Add option to change password
 
 - [ ] Create App Icon
-- [ ] Add proper name for the app
+- [x] Add proper name for the app
 - [ ] Increase time that "remember me" works
