@@ -63,8 +63,10 @@ func SetupRouter(db *gorm.DB, cfg *config.Config) *gin.Engine {
 		}
 
 		lookup := v1.Group("/lookup")
+		lookup.Use(authMiddleware)
 		{
 			lookup.GET("", lookupHandler.IsbnLookup)
+			lookup.GET("/search", lookupHandler.SearchByTerm)
 		}
 	}
 

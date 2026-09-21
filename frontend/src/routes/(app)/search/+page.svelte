@@ -1,74 +1,107 @@
 <script lang="ts">
-  import { getContext, onMount } from "svelte";
-  import { Search, BookOpen, CirclePlus } from "lucide-svelte";
+  import { page } from "$app/state";
+  import { goto } from "$app/navigation";
+  import { getContext, onDestroy } from "svelte";
+  import { Search, BookOpen } from "lucide-svelte";
   import Loader from "../../../components/Loader.svelte";
-  import type { Book, BookReadingStatus } from "$lib/types";
-  import { handleBack } from "$lib/util";
+  import type { Book, LookupBook } from "$lib/types";
   import type { NavState } from "../../../lib/nav_helper";
   import BookPage from "../../../components/BookPreview.svelte";
   import Input from "../../../components/Input.svelte";
   import BookCard from "../../../components/BookCard.svelte";
-
-  let selectedBook: Book | null = $state(null);
-
-  function resetNav() {
-    navState.heading = "Search Book";
-    navState.showBackButton = false;
-    navState.onBack = handleBack;
-    selectedBook = null;
-  }
+  import { createBook, lookupSearchterm } from "$lib/api";
 
   let navState = getContext<NavState>("navState");
-  if (navState) {
-    resetNav();
-  }
 
-  let books = $state<Book[]>([]);
+  let books = $state<LookupBook[]>([]);
   let isLoading = $state(false);
   let errorMessage = $state("");
   let searchQuery = $state("");
 
-  function selectBook(book: Book) {
-    if (navState) {
+  let selectedIsbn = $derived(page.url.searchParams.get("isbn"));
+
+  let selectedBook = $derived(
+    selectedIsbn ? (books.find((b) => b.isbn === selectedIsbn) ?? null) : null,
+  );
+
+  $effect(() => {
+    if (!navState) return;
+
+    if (selectedBook) {
+      navState.hideBottomNavigation = true;
       navState.heading = "Book Details";
       navState.showBackButton = true;
-      navState.onBack = () => {
-        resetNav();
-      };
+      navState.onBack = () => history.back();
+    } else {
+      navState.hideBottomNavigation = false;
+      navState.heading = "Search Book";
+      navState.showBackButton = false;
+      navState.onBack = undefined;
     }
-    selectedBook = book;
+  });
+
+  function selectBook(book: Book | LookupBook) {
+    const nextUrl = new URL(page.url);
+    nextUrl.searchParams.set("isbn", book.isbn);
+    goto(nextUrl.toString(), { keepFocus: true, noScroll: true });
   }
 
-  function onDelete(book: Book) {
-    // removeBookById(book.id);
-    resetNav();
+  async function onUpdateSave(book: Book) {
+    try {
+      goto("/");
+      await createBook(book);
+    } catch (err: any) {
+      console.error("Failed to create book:", err);
+      alert(err.message || "Failed to add book to library");
+    }
   }
 
-  function onUpdateSave(book: Book) {
-    // TODO add the update fetch here with the new book
-    console.log(book);
-    resetNav();
+  async function search() {
+    isLoading = true;
+    errorMessage = "";
+    try {
+      let res = await lookupSearchterm(searchQuery);
+      books = res.filter((book) => book.isbn !== "");
+    } catch (err) {
+      errorMessage = "Search failed. Please try again.";
+    } finally {
+      isLoading = false;
+    }
   }
+
+  onDestroy(() => {
+    if (navState) {
+      navState.heading = "Search Book";
+      navState.showBackButton = false;
+      navState.onBack = undefined;
+    }
+  });
 </script>
 
 <div class="page">
-  {#if selectedBook != null}
+  {#if selectedBook}
     <div class="book-page">
       <BookPage
-        editMode
+        showSaveButton
         book={selectedBook}
-        deleteCallback={onDelete}
         saveCallback={onUpdateSave}
-      ></BookPage>
+      />
     </div>
   {/if}
 
   <div class="header">
-    <Input placeholder="Search for a Book" bind:value={searchQuery}>
-      {#snippet icon()}
-        <Search size="24" color="var(--text)" />
-      {/snippet}
-    </Input>
+    <Input
+      placeholder="Search for a Book"
+      bind:value={searchQuery}
+      onkeypress={(e) => {
+        if (e.key == "Enter") {
+          search();
+        }
+      }}
+    ></Input>
+    <button class="serach-button Primary" onclick={search}
+      ><Search></Search></button
+    >
   </div>
 
   <div class="books-container">
@@ -80,20 +113,16 @@
     {:else if errorMessage}
       <div class="status-view error">
         <p>{errorMessage}</p>
-        <button onclick={() => []}>Retry</button>
+        <button onclick={search}>Retry</button>
       </div>
     {:else if books.length === 0}
       <div class="status-view empty">
         <BookOpen size="48" color="var(--accent-color)" />
-        {#if searchQuery}
-          <p>No books found matching "{searchQuery}"</p>
-        {:else}
-          <h3>Search for a book</h3>
-          <p>Add books to your library that you can't scan right now</p>
-        {/if}
+        <h3>Search for a book</h3>
+        <p>Add books to your library that you can't scan right now</p>
       </div>
     {:else}
-      {#each books as book (book.id)}
+      {#each books as book (book)}
         <BookCard onclick={() => selectBook(book)} {book} />
       {/each}
     {/if}
@@ -116,21 +145,27 @@
     top: 0;
     left: 0;
     height: 100%;
+    width: 100%;
     background-color: var(--main-background);
     z-index: 5;
   }
 
   .header {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
+    display: grid;
+    grid-template-columns: auto min-content;
+    gap: 0.25rem;
     padding: 2rem 1rem;
     padding-bottom: 1rem;
-    /* border-bottom: 1px solid var(--outline); */
     background-color: var(--main-background);
     position: sticky;
     top: 0;
     z-index: 2;
+  }
+
+  .serach-button {
+    min-height: initial;
+    min-width: initial;
+    aspect-ratio: 1/1;
   }
 
   .books-container {

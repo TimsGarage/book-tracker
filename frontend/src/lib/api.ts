@@ -113,8 +113,7 @@ export async function removeBookById(id: number, customFetch?: typeof fetch): Pr
 }
 
 export async function lookupIsbn(isbn: string, customFetch?: typeof fetch): Promise<LookupBook> {
-  const fetchFn = customFetch || fetch;
-  const res = await fetchFn(`${API_BASE}/api/v1/lookup?isbn=${encodeURIComponent(isbn)}`);
+  const res = await authState.authFetch(`${API_BASE}/api/v1/lookup?isbn=${encodeURIComponent(isbn)}`);
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
     throw new Error(errorData.error || 'Book not found for this ISBN');
@@ -123,3 +122,12 @@ export async function lookupIsbn(isbn: string, customFetch?: typeof fetch): Prom
   return data;
 }
 
+export async function lookupSearchterm(searchterm: string, customFetch?: typeof fetch): Promise<LookupBook[]> {
+  const res = await authState.authFetch(`${API_BASE}/api/v1/lookup/search?searchterm=${encodeURIComponent(searchterm)}`);
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Book not found for this ISBN');
+  }
+  const data = await res.json();
+  return data;
+}
