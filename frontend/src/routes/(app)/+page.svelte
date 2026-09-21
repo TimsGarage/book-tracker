@@ -16,6 +16,8 @@
   import { handleBack, owning_options } from "$lib/util";
   import Select from "../../components/Select.svelte";
   import { goto } from "$app/navigation";
+  import ListView from "../../components/ListView.svelte";
+  import GridView from "../../components/GridView.svelte";
 
   let navState = getContext<NavState>("navState");
   if (navState) {
@@ -29,6 +31,7 @@
   let books = $state<Book[]>([]);
   let isLoading = $state(true);
   let errorMessage = $state("");
+  let gridView = $state(true);
   let searchQuery = $state("");
   let activeOwnershipFilter = $state<"all" | BookOwnershipStatus>("all");
   let activeReadingStatusFilter = $state<"all" | BookReadingStatus>("all");
@@ -143,6 +146,15 @@
         onclick={() => (activeReadingStatusFilter = "reading")}
       />
     </div>
+
+    <div class="view">
+      <button class:active={!gridView} onclick={() => (gridView = false)}
+        >List</button
+      >
+      <button class:active={gridView} onclick={() => (gridView = true)}
+        >Grid</button
+      >
+    </div>
   </div>
 
   <div class="books-container">
@@ -170,10 +182,10 @@
           </a>
         {/if}
       </div>
+    {:else if gridView}
+      <GridView books={filteredBooks} />
     {:else}
-      {#each filteredBooks as book (book.id)}
-        <BookCard onclick={() => goto("/" + book.id)} {book} />
-      {/each}
+      <ListView books={filteredBooks} />
     {/if}
   </div>
 </div>
@@ -206,6 +218,34 @@
     overflow-x: auto;
     gap: 0.5rem;
     cursor: pointer;
+  }
+
+  .view {
+    width: 100%;
+    display: flex;
+  }
+
+  .view button {
+    height: 2rem;
+    min-height: unset;
+    border-collapse: collapse;
+    border-radius: 1rem;
+  }
+
+  .view button.active {
+    background-color: var(--accent-color);
+    color: var(--text-reversed);
+    border-color: var(--accent-color);
+  }
+
+  .view button:nth-of-type(1) {
+    border-top-right-radius: 0px;
+    border-bottom-right-radius: 0px;
+  }
+
+  .view button:nth-of-type(2) {
+    border-top-left-radius: 0px;
+    border-bottom-left-radius: 0px;
   }
 
   .books-container {

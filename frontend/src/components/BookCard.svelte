@@ -1,14 +1,18 @@
 <script lang="ts">
   import Loader from "./Loader.svelte";
   import type { Book } from "$lib/types";
-  let { book, onclick }: { book: Book; onclick: any } = $props();
+  let {
+    book,
+    onclick,
+    reduced = false,
+  }: { book: Book; onclick: any; reduced?: boolean } = $props();
 
   let loading_cover = $state(true);
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="book-card" {onclick}>
+<div class="book-card" class:reduced {onclick}>
   {#if loading_cover && book.thumbnail_link}
     <div class="thumbnail">
       <Loader size="32px" />
@@ -24,26 +28,28 @@
     />
   {:else}
     <div class="thumbnail no-cover">
-      <span>No Cover</span>
+      <span>{book.title}</span>
     </div>
   {/if}
 
-  <div class="publisher">
-    <p>{book.publisher}</p>
-    <p>{book.ownership_status}</p>
-  </div>
+  {#if !reduced}
+    <div class="publisher">
+      <p>{book.publisher}</p>
+      <p>{book.ownership_status}</p>
+    </div>
 
-  <div class="main-info">
-    <h2>{book.title}</h2>
-    <h6>{book.author}</h6>
-  </div>
+    <div class="main-info">
+      <h2>{book.title}</h2>
+      <h6>{book.author}</h6>
+    </div>
 
-  <div class="additional-info">
-    <p>
-      Pages: {book.pages} - {book.release} - {book.reading_status}
-      <!-- <span>3/5<Star size="16" color="var(--accent-color)" /></span> -->
-    </p>
-  </div>
+    <div class="additional-info">
+      <p>
+        Pages: {book.pages} - {book.release} - {book.reading_status}
+        <!-- <span>3/5<Star size="16" color="var(--accent-color)" /></span> -->
+      </p>
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -61,6 +67,14 @@
     grid-template-columns: 100px 1fr;
     grid-template-rows: min-content 1fr min-content;
     column-gap: 0.5rem;
+  }
+
+  .book-card.reduced {
+    display: flex;
+    background-color: var(--secondary-background);
+    border: none;
+    border-radius: 0.25rem;
+    padding: 0.5rem;
   }
 
   .book-card > .thumbnail {
