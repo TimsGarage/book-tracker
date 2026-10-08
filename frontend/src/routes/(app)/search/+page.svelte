@@ -31,11 +31,13 @@
       navState.hideBottomNavigation = true;
       navState.heading = "Book Details";
       navState.showBackButton = true;
+      navState.icon = Search;
       navState.onBack = () => history.back();
     } else {
       navState.hideBottomNavigation = false;
       navState.heading = "Search Book";
       navState.showBackButton = false;
+      navState.icon = Search;
       navState.onBack = undefined;
     }
   });
@@ -71,7 +73,6 @@
 
   onDestroy(() => {
     if (navState) {
-      navState.heading = "Search Book";
       navState.showBackButton = false;
       navState.onBack = undefined;
     }

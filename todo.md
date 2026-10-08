@@ -1,8 +1,16 @@
 ## Todos
 
-- [x] Add button to switch between grid and list view
+## Priority todos
+
+- [x] state für scroll state auf hauptseite
+- [x] state for filter and search on main page
+- [x] scroll on book pages or at least have the title shorten drastically
 - [ ] Add option to add your own photo for a book
-- [ ] Add option to rename book
+- [x] Add option to rename book
+
+## any
+
+- [x] Add button to switch between grid and list view
 - [ ] Add flag for "Sachbuecher", which will be excluded from reading_status
 - [ ] Allow for storing book series and sorting them together
 
@@ -11,9 +19,9 @@
 
 - [x] Add  backend fallback to the deutsche Nationalbibliothek if fetch from openlibrary does not work
   -  https://services.dnb.de/sru/dnb?version=1.1&operation=searchRetrieve&query=num%3D978-3-473-58572-4&recordSchema=MARC21-xml
-- [ ] Also add connector to google books in backend
+- [ ] Also add connector to google books in backend for fallback images? 
 - [ ] Add option to change password
 
-- [ ] Create App Icon
+- [x] Create App Icon
 - [x] Add proper name for the app
-- [ ] Increase time that "remember me" works
+- [x] Increase time that "remember me" works

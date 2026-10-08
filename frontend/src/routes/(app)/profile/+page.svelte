@@ -37,6 +37,7 @@
 </script>
 
 <div class="page">
+  <a href="/dev">Dev page</a>
   <div class="card account-card">
     <div class="avatar">
       <CircleUserRound size="64" color="var(--accent-color)" />

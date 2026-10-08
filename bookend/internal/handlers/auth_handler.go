@@ -23,7 +23,7 @@ func NewAuthHandler(db *gorm.DB, jwtSecret string) *AuthHandler {
 	return &AuthHandler{
 		db:        db,
 		jwtSecret: jwtSecret,
-		tokenTTL:  24 * time.Hour,
+		tokenTTL:  30 * 24 * time.Hour,
 	}
 }
 

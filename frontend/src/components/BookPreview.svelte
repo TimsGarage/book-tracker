@@ -10,91 +10,129 @@
     book = $bindable(),
     showSaveButton = false,
     showDeleteButton = false,
+    allowEditing = false,
     deleteCallback = ({}) => {},
     saveCallback = ({}) => {},
   }: {
     book: Book;
     showSaveButton?: boolean;
     showDeleteButton?: boolean;
+    allowEditing?: boolean;
     deleteCallback?: (book: Book) => void;
     saveCallback?: (book: Book) => void;
   } = $props();
 
   function onDelete() {
-    deleteCallback(myBook);
+    deleteCallback($state.snapshot(myBook));
   }
 
   function onSave() {
-    saveCallback(myBook);
+    saveCallback($state.snapshot(myBook));
   }
 
   let myBook = $state(book);
   myBook.owned_since = myBook.owned_since ?? getTodayString();
 
   let loading_cover = $state(true);
+
+  let editingTitle = $state(false);
+  let titleEdit = $state("");
+  function handleTitleKeydown(e) {
+    if (e.key == "Enter") {
+      myBook.title = titleEdit;
+      editingTitle = false;
+    } else if (e.key == "Escape") {
+      handleTitleBlur();
+    }
+  }
+
+  function handleTitleBlur() {
+    editingTitle = false;
+  }
 </script>
 
 <div class="bookpreview" style="margin-bottom: 1.5rem;">
   <span class="decoration-1"></span>
   <span class="decoration-2"></span>
 
-  <div class="floating-buttons">
-    {#if showDeleteButton}
-      <button class="deleteButton" onclick={onDelete}>
-        <Trash></Trash>
-      </button>
-    {/if}
-    {#if showSaveButton}
-      <button class="saveButton" onclick={onSave}>
-        <Save></Save>
-      </button>
-    {/if}
-  </div>
+  <div class="scroll-container">
+    <div class="floating-buttons">
+      {#if showDeleteButton}
+        <button class="deleteButton" onclick={onDelete}>
+          <Trash></Trash>
+        </button>
+      {/if}
+      {#if showSaveButton}
+        <button class="saveButton" onclick={onSave}>
+          <Save></Save>
+        </button>
+      {/if}
+    </div>
 
-  <div class="thumbnail">
-    {#if loading_cover}
-      <Loader size="64px"></Loader>
-    {/if}
-    {#if myBook.thumbnail_link}
-      <img
-        onload={() => {
-          loading_cover = false;
-        }}
-        onerror={() => (loading_cover = false)}
-        src={myBook.thumbnail_link}
-        alt={myBook.title || "cover"}
+    <div class="thumbnail">
+      {#if loading_cover}
+        <Loader size="64px"></Loader>
+      {/if}
+      {#if myBook.thumbnail_link}
+        <img
+          onload={() => {
+            loading_cover = false;
+          }}
+          onerror={() => (loading_cover = false)}
+          src={myBook.thumbnail_link}
+          alt={myBook.title || "cover"}
+        />
+      {/if}
+    </div>
+
+    {#if editingTitle && allowEditing}
+      <textarea
+        class="MainText"
+        autofocus
+        bind:value={titleEdit}
+        onblur={handleTitleBlur}
+        onkeydown={handleTitleKeydown}
       />
+    {:else}
+      <h1
+        onclick={() => {
+          titleEdit = myBook.title;
+          editingTitle = true;
+        }}
+        class="title"
+      >
+        {myBook.title}
+      </h1>
     {/if}
+
+    <h3 class="author">
+      {myBook.author}
+    </h3>
+    <p class="additional-info">
+      {myBook.pages ? `${myBook.pages} Pages` : ""}
+    </p>
+
+    <p
+      style="width: 100%; font-size: .8rem; color: var(--text-muted); font-weight: 600; border-bottom: 1px solid var(--outline); margin-top: .75rem; padding-block: .25rem;"
+    >
+      Catalogue options
+    </p>
+
+    <div class="button-group">
+      <Select
+        options={owning_options}
+        bind:value={myBook.ownership_status}
+        fill
+      />
+      <Datepicker
+        label="Purchased"
+        bind:value={myBook.owned_since}
+        fill
+        disabled={myBook.ownership_status != "owned"}
+      />
+    </div>
+    <Select options={read_options} bind:value={myBook.reading_status} fill />
   </div>
-
-  <h1 class="title">{myBook.title}</h1>
-  <h3 class="author">
-    {myBook.author}
-  </h3>
-  <p class="additional-info">
-    {myBook.pages ? `${myBook.pages} Pages` : ""}
-  </p>
-
-  <p
-    style="width: 100%; font-size: .8rem; color: var(--text-muted); font-weight: 600; border-bottom: 1px solid var(--outline); margin-top: .75rem; padding-block: .25rem;"
-  >
-    Catalogue options
-  </p>
-
-  <div class="button-group">
-    <Select
-      options={owning_options}
-      bind:value={myBook.ownership_status}
-      fill
-    />
-    <Datepicker
-      label="Purchased"
-      bind:value={myBook.owned_since}
-      fill
-      disabled={myBook.ownership_status != "owned"}
-    />
-  </div>
-  <Select options={read_options} bind:value={myBook.reading_status} fill />
 </div>
 
 <style>
@@ -109,6 +147,19 @@
     height: 100%;
     width: 100%;
     overflow: hidden;
+  }
+
+  .scroll-container {
+    z-index: 1;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    overflow-y: auto;
   }
 
   .bookpreview > * {
@@ -182,10 +233,31 @@
     max-width: 100%;
   }
 
-  .title {
+  .title,
+  textarea {
     text-align: center;
     margin-inline: 1rem;
-    font-size: 2.5rem;
+    font-size: 2rem;
+    line-height: 2.5rem;
+  }
+
+  .title {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3; /* Standard property for future compatibility */
+    overflow: hidden;
+  }
+
+  textarea {
+    field-sizing: content;
+    background: none;
+    text-decoration: underline;
+    border: none;
+    outline: none;
+    resize: none;
+    overflow: visible;
+    font-weight: 600;
   }
 
   .author,

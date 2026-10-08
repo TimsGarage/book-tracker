@@ -63,6 +63,7 @@
     <BookPage
       showDeleteButton
       showSaveButton
+      allowEditing
       {book}
       deleteCallback={onDelete}
       saveCallback={onUpdateSave}

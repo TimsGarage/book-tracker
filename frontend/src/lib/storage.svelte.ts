@@ -1,4 +1,7 @@
 import { browser } from "$app/environment";
+import { writable } from "svelte/store";
+
+export const page_library_scrollPos = writable(0);
 
 export function createPersistentState<T>(key: string, initialValue: T) {
   let stored: T = initialValue;

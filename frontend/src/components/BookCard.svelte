@@ -178,7 +178,8 @@
   }
 
   h2 {
-    line-height: 1.6rem;
+    font-size: 1.4rem;
+    line-height: 1.7rem;
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;

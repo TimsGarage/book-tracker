@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { getContext, onMount } from "svelte";
-  import BookCard from "../../components/BookCard.svelte";
+  import { getContext, onDestroy, onMount } from "svelte";
   import { type NavState } from "../../lib/nav_helper";
   import Input from "../../components/Input.svelte";
   import Loader from "../../components/Loader.svelte";
@@ -12,13 +11,14 @@
     BookOwnershipStatus,
     BookReadingStatus,
   } from "$lib/types";
-  import BookPage from "../../components/BookPreview.svelte";
   import { handleBack, owning_options } from "$lib/util";
   import Select from "../../components/Select.svelte";
-  import { goto } from "$app/navigation";
   import ListView from "../../components/ListView.svelte";
   import GridView from "../../components/GridView.svelte";
-  import { createPersistentState } from "$lib/storage.svelte";
+  import {
+    createPersistentState,
+    page_library_scrollPos,
+  } from "$lib/storage.svelte";
 
   let navState = getContext<NavState>("navState");
   if (navState) {
@@ -30,16 +30,28 @@
   }
 
   const viewMode = createPersistentState<"grid" | "list">(
-    "book_view_mode",
+    "page_library_view-mode",
     "list",
   );
+
+  const searchQuery = createPersistentState<string>(
+    "page_library_search-term",
+    "",
+  );
+
+  const activeOwnershipFilter = createPersistentState<
+    "all" | BookOwnershipStatus
+  >("page_library_ownership-filter", "all");
+
+  const activeReadingStatusFilter = createPersistentState<
+    "all" | BookReadingStatus
+  >("page_library_readingstatus-filter", "all");
 
   let books = $state<Book[]>([]);
   let isLoading = $state(true);
   let errorMessage = $state("");
-  let searchQuery = $state("");
-  let activeOwnershipFilter = $state<"all" | BookOwnershipStatus>("all");
-  let activeReadingStatusFilter = $state<"all" | BookReadingStatus>("all");
+
+  let scrollContainer: HTMLElement | undefined = undefined;
 
   async function loadBooks() {
     isLoading = true;
@@ -56,13 +68,24 @@
 
   onMount(() => {
     loadBooks();
+
+    const savedScroll = $page_library_scrollPos;
+    if (scrollContainer && savedScroll) {
+      scrollContainer.scrollTop = savedScroll;
+    }
+  });
+
+  onDestroy(() => {
+    if (scrollContainer) {
+      page_library_scrollPos.set(scrollContainer.scrollTop);
+    }
   });
 
   // 1. Filter books ONLY by search query
   const searchMatchedBooks = $derived(
     books.filter((b: Book) => {
       let searchMatched = false;
-      const q = searchQuery.toLowerCase().trim();
+      const q = searchQuery.current.toLowerCase().trim();
       if (!q) searchMatched = true;
       searchMatched =
         (b.title || "").toLowerCase().includes(q) ||
@@ -70,10 +93,11 @@
         (b.isbn || "").toLowerCase().includes(q);
 
       let ownershipFilterMatched = false;
-      if (activeOwnershipFilter === "all") {
+      if (activeOwnershipFilter.current === "all") {
         ownershipFilterMatched = b.ownership_status !== "wishlist";
       } else {
-        ownershipFilterMatched = b.ownership_status === activeOwnershipFilter;
+        ownershipFilterMatched =
+          b.ownership_status === activeOwnershipFilter.current;
       }
 
       return ownershipFilterMatched && searchMatched;
@@ -95,10 +119,11 @@
   const filteredBooks = $derived(
     searchMatchedBooks.filter((b) => {
       let readingFilterMatched = false;
-      if (activeReadingStatusFilter === "all") {
+      if (activeReadingStatusFilter.current === "all") {
         readingFilterMatched = true;
       } else {
-        readingFilterMatched = b.reading_status === activeReadingStatusFilter;
+        readingFilterMatched =
+          b.reading_status === activeReadingStatusFilter.current;
       }
 
       return readingFilterMatched;
@@ -112,13 +137,13 @@
       class="group"
       style="display: grid; grid-template-columns: 60% 40%; gap: .25rem;"
     >
-      <Input placeholder="Search for a Book" bind:value={searchQuery}>
+      <Input placeholder="Search for a Book" bind:value={searchQuery.current}>
         {#snippet icon()}
           <Search size="24" color="var(--text)" />
         {/snippet}
       </Input>
       <Select
-        bind:value={activeOwnershipFilter}
+        bind:value={activeOwnershipFilter.current}
         options={[
           {
             title: "All Books",
@@ -131,28 +156,28 @@
 
     <div class="tags">
       <Chip
-        onclick={() => (activeReadingStatusFilter = "all")}
+        onclick={() => (activeReadingStatusFilter.current = "all")}
         text="All Books ({filteredBooks.length})"
-        selected={activeReadingStatusFilter === "all"}
+        selected={activeReadingStatusFilter.current === "all"}
       />
       <Chip
-        onclick={() => (activeReadingStatusFilter = "unread")}
+        onclick={() => (activeReadingStatusFilter.current = "unread")}
         text="Unread ({unreadCount})"
-        selected={activeReadingStatusFilter === "unread"}
+        selected={activeReadingStatusFilter.current === "unread"}
       />
       <Chip
         text="Read ({readCount})"
-        selected={activeReadingStatusFilter === "read"}
-        onclick={() => (activeReadingStatusFilter = "read")}
+        selected={activeReadingStatusFilter.current === "read"}
+        onclick={() => (activeReadingStatusFilter.current = "read")}
       />
       <Chip
         text="Reading ({readingCount})"
-        selected={activeReadingStatusFilter === "reading"}
-        onclick={() => (activeReadingStatusFilter = "reading")}
+        selected={activeReadingStatusFilter.current === "reading"}
+        onclick={() => (activeReadingStatusFilter.current = "reading")}
       />
     </div>
 
-    <div class="view">
+    <!-- <div class="view">
       <button
         class:active={viewMode.current == "list"}
         onclick={() => (viewMode.current = "list")}>List</button
@@ -161,10 +186,10 @@
         class:active={viewMode.current == "grid"}
         onclick={() => (viewMode.current = "grid")}>Grid</button
       >
-    </div>
+    </div> -->
   </div>
 
-  <div class="books-container">
+  <div class="books-container" bind:this={scrollContainer}>
     {#if isLoading}
       <div class="status-view">
         <Loader size="48px" />
@@ -179,7 +204,7 @@
       <div class="status-view empty">
         <BookOpen size="48" color="var(--accent-color)" />
         {#if searchQuery}
-          <p>No books found matching "{searchQuery}"</p>
+          <p>No books found matching "{searchQuery.current}"</p>
         {:else}
           <h3>Your library is empty</h3>
           <p>Scan your first book to begin curating your shelves</p>

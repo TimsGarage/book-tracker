@@ -89,6 +89,8 @@ export async function updateBook(book: Book, customFetch?: typeof fetch): Promis
   const baseUrl = `${API_BASE}/api/v1/books/${book.id}`;
   const url = new URL(baseUrl, typeof window !== "undefined" ? window.location.origin : "http://localhost");
 
+  console.log(book)
+
   const res = await authState.authFetch(
     url.toString(),
     {
