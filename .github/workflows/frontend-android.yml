@@ -3,11 +3,6 @@ name: Build and Release Frontend Android APK
 'on':
   workflow_dispatch:
     inputs:
-      backend_url:
-        description: 'Backend API URL (e.g. https://api.mybooktracker.com)'
-        required: true
-        type: string
-        default: ''
       build_type:
         description: 'Build Flavor'
         required: false
@@ -32,7 +27,7 @@ permissions:
   contents: write
 
 env:
-  VITE_API_URL: ${{ inputs.backend_url || vars.VITE_API_URL || secrets.VITE_API_URL }}
+  VITE_API_URL: ${{ vars.VITE_API_URL || secrets.VITE_API_URL }}
   BUILD_TYPE: ${{ inputs.build_type || 'release' }}
   TARGET_ARCH: ${{ inputs.targets || 'aarch64' }}
 
