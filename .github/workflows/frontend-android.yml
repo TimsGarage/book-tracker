@@ -19,11 +19,11 @@ name: Build and Release Frontend Android APK
       targets:
         description: 'Target CPU Architectures'
         required: false
-        default: 'all'
+        default: 'aarch64' # Changed default to aarch64 for 3x faster builds
         type: choice
         options:
-          - 'all'
           - 'aarch64'
+          - 'all'
   push:
     tags:
       - 'v*.*.*'
@@ -34,7 +34,7 @@ permissions:
 env:
   VITE_API_URL: ${{ inputs.backend_url || vars.VITE_API_URL || secrets.VITE_API_URL }}
   BUILD_TYPE: ${{ inputs.build_type || 'release' }}
-  TARGET_ARCH: ${{ inputs.targets || 'all' }}
+  TARGET_ARCH: ${{ inputs.targets || 'aarch64' }}
 
 jobs:
   build-apk:
@@ -49,7 +49,7 @@ jobs:
         run: |
           if [ -z "$VITE_API_URL" ]; then
             echo "::error::No backend URL provided!"
-            echo "Please provide 'backend_url' when triggering manually, or configure 'vars.VITE_API_URL' in GitHub repository settings (Settings > Secrets and variables > Actions > Variables)."
+            echo "Please provide 'backend_url' when triggering manually, or configure 'vars.VITE_API_URL' in GitHub repository settings."
             exit 1
           fi
           echo "Target backend URL: $VITE_API_URL"
@@ -61,11 +61,23 @@ jobs:
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Setup Java JDK
+      - name: Setup Java JDK & Gradle Cache
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
+
+      # Cache Gradle dependencies and cache build artifacts
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      # Cache NDK to avoid downloading via sdkmanager on every run
+      - name: Cache Android NDK
+        id: cache-ndk
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.tool_cache }}/android-ndk-r26b
+          key: ndk-26.1.10909125
 
       - name: Setup Android NDK
         run: |
@@ -80,12 +92,13 @@ jobs:
       - name: Setup Rust Toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+          targets: ${{ env.TARGET_ARCH == 'aarch64' && 'aarch64-linux-android' || 'aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android' }}
 
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: frontend/src-tauri
+          cache-on-failure: true
 
       - name: Install Frontend Dependencies
         working-directory: frontend
@@ -120,7 +133,7 @@ jobs:
             KEY_PASS="${{ secrets.ANDROID_KEY_PASSWORD }}"
             KEY_ALIAS="${{ secrets.ANDROID_KEY_ALIAS }}"
           else
-            echo "No custom keystore secrets found. Generating personal key for immediate installation on personal devices..."
+            echo "No custom keystore secrets found. Generating personal key..."
             KEYSTORE_FILE="/tmp/personal-release.keystore"
             keytool -genkeypair -v \
               -keystore "$KEYSTORE_FILE" \
@@ -151,7 +164,6 @@ jobs:
       - name: Collect Output APKs
         run: |
           mkdir -p release-apks
-          # Copy signed APKs (skip unsigned versions if signed version exists)
           find frontend/src-tauri/gen/android/app/build/outputs/apk -name "*.apk" ! -name "*-unsigned.apk" -exec cp {} release-apks/ \;
           if [ -z "$(ls -A release-apks)" ]; then
             find frontend/src-tauri/gen/android/app/build/outputs/apk -name "*.apk" -exec cp {} release-apks/ \;
@@ -167,10 +179,10 @@ jobs:
           retention-days: 30
 
       - name: Publish to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: release-apks/*.apk
           draft: false
           prerelease: false
           generate_release_notes: true
-
