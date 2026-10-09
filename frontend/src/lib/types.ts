@@ -25,6 +25,7 @@ export interface Book {
   release?: string;
   publisher?: string;
   thumbnail_link?: string;
+  cover_path?: string;
   pages?: number;
   
   ownership_status: BookOwnershipStatus;
@@ -38,6 +39,7 @@ export interface Book {
 
 export interface LookupBook {
   isbn: string;
+  isbn10: string;
   title: string;
   author: string;
   description?: string;

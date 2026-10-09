@@ -52,10 +52,11 @@ export async function fetchBookById(id: number, customFetch?: typeof fetch): Pro
   return data.data;
 }
 
-export async function createBook(book: Book, customFetch?: typeof fetch): Promise<Book> {
+export async function createBook(book: LookupBook, customFetch?: typeof fetch): Promise<Book> {
   const baseUrl = `${API_BASE}/api/v1/books`;
   const url = new URL(baseUrl, typeof window !== "undefined" ? window.location.origin : "http://localhost");
   if (book.isbn) url.searchParams.set("isbn", book.isbn);
+  if (book.isbn10) url.searchParams.set("isbn10", book.isbn10);
   if (book.title) url.searchParams.set("title", book.title);
   if (book.author) url.searchParams.set("author", book.author);
   if (book.description) url.searchParams.set("description", book.description);
@@ -84,6 +85,27 @@ export async function createBook(book: Book, customFetch?: typeof fetch): Promis
   const data = await res.json();
   return data.data;
 }
+
+export async function updateBookCover(book: Book, customFetch?: typeof fetch): Promise<Book> {
+  const baseUrl = `${API_BASE}/api/v1/books/cover/${book.id}`;
+  const url = new URL(baseUrl, typeof window !== "undefined" ? window.location.origin : "http://localhost");
+
+  const res = await authState.authFetch(
+    url.toString(),
+    {
+      method: "PUT",
+      body: JSON.stringify(book),
+    },
+    customFetch
+  );
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || `Failed to update book cover: ${res.statusText}`);
+  }
+  const data = await res.json();
+  return data.data;
+}
+
 
 export async function updateBook(book: Book, customFetch?: typeof fetch): Promise<Book> {
   const baseUrl = `${API_BASE}/api/v1/books/${book.id}`;

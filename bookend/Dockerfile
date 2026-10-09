@@ -31,7 +31,8 @@ WORKDIR /app
 COPY --from=builder /app/bookend /app/bookend
 
 # Prepare persistent data directory with non-root ownership
-RUN mkdir -p /data && chown -R appuser:appgroup /data /app
+RUN mkdir -p /data
+RUN mkdir -p /data/covers && chown -R appuser:appgroup /data /app
 
 # Set production defaults for environment variables
 ENV PORT=8080 \

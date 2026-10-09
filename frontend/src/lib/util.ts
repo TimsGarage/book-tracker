@@ -1,6 +1,11 @@
 import { goto } from "$app/navigation";
 import { BookCheck, BookDown, Bookmark, BookMarked, BookmarkX, BookOpenText, Library, Star } from "lucide-svelte";
-import type { BookOwnershipStatus, BookReadingStatus } from "./types";
+import type { Book, BookOwnershipStatus, BookReadingStatus } from "./types";
+import { API_BASE } from "./auth.svelte";
+
+export function getCoverUrl(book: Book): string {
+  return `${API_BASE}/api/v1/${book.cover_path}`
+}
 
 export function handleBack() {
     if (window.history.length > 1) {
@@ -9,7 +14,6 @@ export function handleBack() {
         goto('/');
     }
 }
-
 
 export function getTodayString(): string {
   const today = new Date();

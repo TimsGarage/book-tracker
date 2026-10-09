@@ -8,6 +8,7 @@ import (
 type Config struct {
 	Port          string
 	DBPath        string
+	CoverPath     string
 	GinMode       string
 	JWTSecret     string
 	AdminUsername string
@@ -18,6 +19,7 @@ type Config struct {
 func LoadConfig() *Config {
 	port := getEnv("PORT", "8080")
 	dbPath := getEnv("DB_PATH", "bookend.db")
+	coverPath := getEnv("COVER_PATH", "./")
 	ginMode := getEnv("GIN_MODE", "debug")
 	jwtSecret := getEnv("JWT_SECRET", "bookend-default-secret-change-me")
 	adminUsername := getEnv("ADMIN_USERNAME", "admin")
@@ -26,6 +28,7 @@ func LoadConfig() *Config {
 	return &Config{
 		Port:          port,
 		DBPath:        dbPath,
+		CoverPath:     coverPath,
 		GinMode:       ginMode,
 		JWTSecret:     jwtSecret,
 		AdminUsername: adminUsername,

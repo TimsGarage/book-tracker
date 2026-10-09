@@ -1,10 +1,16 @@
 <script lang="ts">
   import Select from "./Select.svelte";
   import Datepicker from "./Datepicker.svelte";
-  import { getTodayString, owning_options, read_options } from "$lib/util";
+  import {
+    getCoverUrl,
+    getTodayString,
+    owning_options,
+    read_options,
+  } from "$lib/util";
   import type { Book, LookupBook } from "$lib/types";
-  import { Save, Trash } from "lucide-svelte";
+  import { Image, Save, Trash } from "lucide-svelte";
   import Loader from "./Loader.svelte";
+  import { updateBookCover } from "$lib/api";
 
   let {
     book = $bindable(),
@@ -67,19 +73,22 @@
           <Save></Save>
         </button>
       {/if}
+      <button class="saveButton" onclick={() => updateBookCover(book)}>
+        <Image></Image>
+      </button>
     </div>
 
     <div class="thumbnail">
       {#if loading_cover}
         <Loader size="64px"></Loader>
       {/if}
-      {#if myBook.thumbnail_link}
+      {#if myBook.cover_path}
         <img
           onload={() => {
             loading_cover = false;
           }}
           onerror={() => (loading_cover = false)}
-          src={myBook.thumbnail_link}
+          src={getCoverUrl(book)}
           alt={myBook.title || "cover"}
         />
       {/if}

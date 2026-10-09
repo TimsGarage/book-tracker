@@ -49,6 +49,24 @@ func (r *dnbRecord) getSubfield(tag, code string) string {
 	return ""
 }
 
+// Extract ISBN10 from 020 datafields (MARC21)
+func (r *dnbRecord) getISBN10() string {
+	reDigitX := regexp.MustCompile(`[0-9]{9}[0-9X]`)
+	for _, df := range r.DataFields {
+		if df.Tag == "020" {
+			for _, sf := range df.Subfields {
+				if sf.Code == "a" || sf.Code == "z" {
+					cleanVal := strings.ReplaceAll(strings.ReplaceAll(sf.Value, "-", ""), " ", "")
+					if match := reDigitX.FindString(cleanVal); len(match) == 10 {
+						return match
+					}
+				}
+			}
+		}
+	}
+	return ""
+}
+
 // Helper to extract an integer page count from bibliographic text (e.g. "320 S.", "xiv, 250 p.")
 func parsePageCount(raw string) int {
 	re := regexp.MustCompile(`\d+`)
@@ -166,12 +184,19 @@ func DnbLookupIsbn(isbn string) BookLookupResponse {
 	pagesRaw := rec.getSubfield("300", "a")
 	pageCount := parsePageCount(pagesRaw)
 
+	// Extract 10-digit ISBN from record
+	isbn10 := rec.getISBN10()
+
 	// Since DNB does not provide cover images via MARC21 XML,
 	// resolve directly from Open Library's deterministic static image endpoint.
-	thumbnailURL := fmt.Sprintf("https://covers.openlibrary.org/b/isbn/%s-L.jpg", cleanISBN)
+	thumbnailURL := ""
+	if isbn10 != "" {
+		thumbnailURL = fmt.Sprintf("https://images-na.ssl-images-amazon.com/images/P/%s.01.LZZZZZZZ.jpg", isbn10)
+	}
 
 	book := models.LookupBook{
 		Isbn:          cleanISBN,
+		Isbn10:        isbn10,
 		Title:         title,
 		Author:        author,
 		Release:       releaseYear,
@@ -322,6 +347,9 @@ func DnbSearchBooks(searchTerm string, limit int) BookSearchResponse {
 			cleanISBN = strings.ReplaceAll(parts[0], "-", "")
 		}
 
+		// Extract 10-digit ISBN
+		isbn10 := rec.getISBN10()
+
 		// Pages
 		pagesRaw := rec.getSubfield("300", "a")
 		pageCount := parsePageCount(pagesRaw)
@@ -334,6 +362,7 @@ func DnbSearchBooks(searchTerm string, limit int) BookSearchResponse {
 
 		books = append(books, models.LookupBook{
 			Isbn:          cleanISBN,
+			Isbn10:        isbn10,
 			Title:         title,
 			Author:        author,
 			Release:       releaseYear,

@@ -9,6 +9,7 @@ type Book struct {
 	Release       string `json:"release" form:"release"`
 	Publisher     string `json:"publisher" form:"publisher"`
 	ThumbnailLink string `json:"thumbnail_link" form:"thumbnail_link"`
+	CoverPath     string `json:"cover_path" form:"cover_path"`
 	Pages         int    `json:"pages" form:"pages"`
 
 	OwnershipStatus string `gorm:"type:varchar(20);check:ownership_status IN ('wishlist', 'unowned', 'owned', 'borrowed')" json:"ownership_status" form:"ownership_status"`
@@ -20,6 +21,7 @@ type Book struct {
 
 type LookupBook struct {
 	Isbn          string `json:"isbn"`
+	Isbn10        string `json:"isbn10"`
 	Title         string `json:"title"`
 	Author        string `json:"author"`
 	Description   string `json:"description"`

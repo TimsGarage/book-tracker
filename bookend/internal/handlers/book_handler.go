@@ -2,9 +2,12 @@ package handlers
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"strconv"
 
+	bookconnector "bookend/internal/book_connector"
+	"bookend/internal/config"
 	"bookend/internal/middleware"
 	"bookend/internal/models"
 
@@ -14,11 +17,12 @@ import (
 
 // BookHandler manages book-related REST API endpoints
 type BookHandler struct {
-	db *gorm.DB
+	db  *gorm.DB
+	cfg *config.Config
 }
 
-func NewBookHandler(db *gorm.DB) *BookHandler {
-	return &BookHandler{db: db}
+func NewBookHandler(db *gorm.DB, cfg *config.Config) *BookHandler {
+	return &BookHandler{db: db, cfg: cfg}
 }
 
 func (h *BookHandler) GetMyBooks(c *gin.Context) {
@@ -90,6 +94,7 @@ func (h *BookHandler) CreateBook(c *gin.Context) {
 	if err := c.ShouldBindJSON(&book); err != nil {
 		if isbn, title := c.Query("isbn"), c.Query("title"); isbn != "" && title != "" {
 			pages, _ := strconv.Atoi(c.Query("pages"))
+
 			book = models.Book{
 				Isbn:          isbn,
 				Title:         title,
@@ -130,6 +135,13 @@ func (h *BookHandler) CreateBook(c *gin.Context) {
 		return
 	}
 
+	coverPath, coverErr := bookconnector.DownloadAndSaveCover(c.Query("isbn10"), book.Isbn, h.cfg.CoverPath)
+	if coverErr != nil {
+		log.Printf("Couldnt download cover. Error: %s", coverErr.Error())
+	}
+
+	book.CoverPath = coverPath
+
 	// Reset ID and assign authenticated user ID
 	book.ID = 0
 	book.UserId = userID
@@ -141,6 +153,54 @@ func (h *BookHandler) CreateBook(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, gin.H{
 		"message": "Book created successfully",
+		"data":    book,
+	})
+}
+
+func (h *BookHandler) UpdateBookCover(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid book ID"})
+		return
+	}
+
+	query := h.db
+	if userID, ok := middleware.GetUserID(c); ok {
+		query = query.Where("user_id = ?", userID)
+	}
+
+	var book models.Book
+	if err := query.First(&book, id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Book not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve book"})
+		return
+	}
+
+	var dnbResponse = bookconnector.DnbLookupIsbn(book.Isbn)
+	if !dnbResponse.Success {
+		log.Printf("%s", "dnbLookup failed: "+dnbResponse.Message)
+		c.JSON(dnbResponse.StatusCode, gin.H{"error": dnbResponse.Message})
+	}
+
+	coverPath, coverErr := bookconnector.DownloadAndSaveCover(dnbResponse.Book.Isbn10, book.Isbn, h.cfg.CoverPath)
+	if coverErr != nil {
+		log.Printf("Couldnt download cover. Error: %s", coverErr.Error())
+	}
+
+	updates := map[string]interface{}{}
+	updates["cover_path"] = coverPath
+
+	if err := h.db.Model(&book).Updates(updates).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update book"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Book updated successfully",
 		"data":    book,
 	})
 }

@@ -3,6 +3,7 @@
   import type { Book } from "$lib/types";
   import {
     BORROWED_ICON,
+    getCoverUrl,
     OWNED_ICON,
     READ_ICON,
     READING_ICON,
@@ -24,14 +25,14 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="book-card" class:reduced {onclick}>
-  {#if loading_cover && book.thumbnail_link}
+  {#if loading_cover && book.cover_path}
     <div class="thumbnail">
       <Loader size="32px" />
     </div>
   {/if}
-  {#if book.thumbnail_link}
+  {#if book.cover_path}
     <img
-      src={book.thumbnail_link}
+      src={getCoverUrl(book)}
       onload={() => (loading_cover = false)}
       onerror={() => (loading_cover = false)}
       alt={book.title || "cover"}

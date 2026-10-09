@@ -1,4 +1,4 @@
-package com.timsalokat.library
+package com.timsalokat.library.dev
 
 import android.os.Bundle
 import androidx.activity.enableEdgeToEdge

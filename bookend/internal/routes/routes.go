@@ -4,6 +4,7 @@ import (
 	"bookend/internal/config"
 	"bookend/internal/handlers"
 	"bookend/internal/middleware"
+	"fmt"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -22,7 +23,7 @@ func SetupRouter(db *gorm.DB, cfg *config.Config) *gin.Engine {
 
 	// Instantiate handlers
 	healthHandler := handlers.NewHealthHandler()
-	bookHandler := handlers.NewBookHandler(db)
+	bookHandler := handlers.NewBookHandler(db, cfg)
 	lookupHandler := handlers.NewLookupHandler(db)
 	authHandler := handlers.NewAuthHandler(db, cfg.JWTSecret)
 
@@ -36,6 +37,7 @@ func SetupRouter(db *gorm.DB, cfg *config.Config) *gin.Engine {
 	v1 := r.Group("/api/v1")
 	{
 		v1.GET("/health", healthHandler.Check)
+		v1.Static("/covers", fmt.Sprintf("%s/covers", cfg.CoverPath))
 
 		// Authentication routes
 		auth := v1.Group("/auth")
@@ -59,6 +61,7 @@ func SetupRouter(db *gorm.DB, cfg *config.Config) *gin.Engine {
 			books.POST("", bookHandler.CreateBook)
 			books.POST("/", bookHandler.CreateBook)
 			books.PUT("/:id", bookHandler.UpdateBook)
+			books.PUT("/cover/:id", bookHandler.UpdateBookCover)
 			books.DELETE("/:id", bookHandler.DeleteBook)
 		}
 
