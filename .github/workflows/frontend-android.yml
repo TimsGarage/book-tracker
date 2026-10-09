@@ -14,7 +14,7 @@ name: Build and Release Frontend Android APK
       targets:
         description: 'Target CPU Architectures'
         required: false
-        default: 'aarch64' # Changed default to aarch64 for 3x faster builds
+        default: 'aarch64'
         type: choice
         options:
           - 'aarch64'
@@ -62,27 +62,19 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      # Cache Gradle dependencies and cache build artifacts
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
-
-      # Cache NDK to avoid downloading via sdkmanager on every run
-      - name: Cache Android NDK
-        id: cache-ndk
-        uses: actions/cache@v4
-        with:
-          path: ${{ runner.tool_cache }}/android-ndk-r26b
-          key: ndk-26.1.10909125
 
       - name: Setup Android NDK
         run: |
           NDK_VERSION="26.1.10909125"
-          if [ ! -d "$ANDROID_HOME/ndk/$NDK_VERSION" ]; then
-            echo "Installing Android NDK $NDK_VERSION..."
-            yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;$NDK_VERSION"
-          fi
+          echo "Installing NDK $NDK_VERSION..."
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;$NDK_VERSION"
+          
+          # Explicitly export NDK paths to GITHUB_ENV
           echo "NDK_HOME=$ANDROID_HOME/ndk/$NDK_VERSION" >> $GITHUB_ENV
           echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/$NDK_VERSION" >> $GITHUB_ENV
+          echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
 
       - name: Setup Rust Toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -103,6 +95,8 @@ jobs:
         working-directory: frontend
         env:
           VITE_API_URL: ${{ env.VITE_API_URL }}
+          NDK_HOME: ${{ env.NDK_HOME }}
+          ANDROID_HOME: ${{ env.ANDROID_HOME }}
         run: |
           BUILD_ARGS="--apk"
           if [ "$BUILD_TYPE" = "debug" ]; then
