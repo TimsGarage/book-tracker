@@ -14,6 +14,7 @@
   import BookPage from "../../../components/BookPreview.svelte";
   import Loader from "../../../components/Loader.svelte";
   import { MonitorX } from "lucide-svelte";
+  import { bookStore } from "$lib/books.svelte";
 
   let navState = getContext<NavState>("navState");
   navState.heading = "Scanner";
@@ -33,7 +34,7 @@
   async function handleAddBook(b: LookupBook) {
     isAdding = true;
     try {
-      await createBook(b);
+      createBook(b);
       goto("/");
     } catch (err: any) {
       console.error("Failed to create book:", err);

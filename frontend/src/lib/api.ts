@@ -1,4 +1,5 @@
 import { authState, API_BASE } from './auth.svelte';
+import { bookStore } from './books.svelte';
 import type { Book, LookupBook } from './types';
 
 export async function createUser(username: string, password: string, customFetch?: typeof fetch): Promise<any> {
@@ -83,6 +84,7 @@ export async function createBook(book: LookupBook, customFetch?: typeof fetch): 
     throw new Error(errorData.error || `Failed to create book: ${res.statusText}`);
   }
   const data = await res.json();
+  bookStore.loadBooks(true);
   return data.data;
 }
 

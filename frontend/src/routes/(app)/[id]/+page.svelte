@@ -8,6 +8,8 @@
   import type { Book } from "$lib/types";
   import BookPage from "../../../components/BookPreview.svelte";
   import { handleBack, owning_options } from "$lib/util";
+  import { bookStore } from "$lib/books.svelte";
+
   let navState = getContext<NavState>("navState");
   if (navState) {
     navState.heading = "Book Details";
@@ -38,12 +40,12 @@
   });
 
   function onDelete(book: Book) {
-    removeBookById(book.id);
+    bookStore.removeBook(book);
     handleBack();
   }
 
   function onUpdateSave(book: Book) {
-    updateBook(book);
+    bookStore.updateBook(book);
     handleBack();
   }
 </script>

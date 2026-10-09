@@ -5,7 +5,6 @@
   import Loader from "../../components/Loader.svelte";
   import { Search, BookOpen, CirclePlus, Icon, Library } from "lucide-svelte";
   import Chip from "../../components/Chip.svelte";
-  import { fetchMyBooks } from "$lib/api";
   import type {
     Book,
     BookOwnershipStatus,
@@ -19,6 +18,7 @@
     createPersistentState,
     page_library_scrollPos,
   } from "$lib/storage.svelte";
+  import { bookStore } from "$lib/books.svelte";
 
   let navState = getContext<NavState>("navState");
   if (navState) {
@@ -47,27 +47,10 @@
     "all" | BookReadingStatus
   >("page_library_readingstatus-filter", "all");
 
-  let books = $state<Book[]>([]);
-  let isLoading = $state(true);
-  let errorMessage = $state("");
-
   let scrollContainer: HTMLElement | undefined = undefined;
 
-  async function loadBooks() {
-    isLoading = true;
-    errorMessage = "";
-    try {
-      books = await fetchMyBooks();
-    } catch (err: any) {
-      console.error("Failed to load books:", err);
-      errorMessage = err.message || "Failed to load library";
-    } finally {
-      isLoading = false;
-    }
-  }
-
-  onMount(() => {
-    loadBooks();
+  onMount(async () => {
+    await bookStore.loadBooks();
 
     const savedScroll = $page_library_scrollPos;
     if (scrollContainer && savedScroll) {
@@ -83,7 +66,7 @@
 
   // 1. Filter books ONLY by search query
   const searchMatchedBooks = $derived(
-    books.filter((b: Book) => {
+    bookStore.books.filter((b: Book) => {
       let searchMatched = false;
       const q = searchQuery.current.toLowerCase().trim();
       if (!q) searchMatched = true;
@@ -190,15 +173,15 @@
   </div>
 
   <div class="books-container" bind:this={scrollContainer}>
-    {#if isLoading}
+    {#if bookStore.isLoading && !bookStore.isLoaded}
       <div class="status-view">
         <Loader size="48px" />
         <p>Loading your library...</p>
       </div>
-    {:else if errorMessage}
+    {:else if !bookStore.isLoaded}
       <div class="status-view error">
-        <p>{errorMessage}</p>
-        <button onclick={loadBooks}>Retry</button>
+        <p>Couldnt fetch your books</p>
+        <button onclick={() => bookStore.loadBooks(true)}>Retry</button>
       </div>
     {:else if filteredBooks.length === 0}
       <div class="status-view empty">
